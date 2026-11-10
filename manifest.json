@@ -1,17 +1,21 @@
 {
   "name": "碰碰乐",
   "short_name": "碰碰乐",
+  "description": "单词消消乐小游戏",
+  "lang": "zh-CN",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#030a09",
-  "theme_color": "#070409",
+  "orientation": "portrait",
+  "background_color": "#244232",
+  "theme_color": "#1a3b2b",
   "icons": [
     {
       "src": "icon.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
-  "description": "单词消消乐小游戏",
   "id": "https://weili985.github.io/pengpengle/"
 }

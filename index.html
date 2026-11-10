@@ -6,6 +6,10 @@
 <title>碰碰乐</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1a3b2b">
+<link rel="icon" type="image/png" sizes="512x512" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="碰碰乐">
 <style>
   * {
     box-sizing: border-box;
@@ -557,7 +561,7 @@ voter, 选民"></textarea>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js');
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
     });
   }
 
