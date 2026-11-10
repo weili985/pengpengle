@@ -125,6 +125,17 @@
     margin: 16px 0;
   }
 
+  .board.dense {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .board.dense .card {
+    min-height: 64px;
+    padding: 10px 6px;
+    font-size: 13px;
+  }
+
   .card {
     position: relative;
     padding: 14px 8px;
@@ -257,6 +268,12 @@
     background: linear-gradient(180deg, var(--btn-active), #2f8f5c);
     border-color: rgba(255, 255, 255, 0.25);
     box-shadow: 0 10px 24px rgba(79, 191, 122, 0.4);
+  }
+
+  .chip.disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
   }
 
   .desc {
@@ -412,6 +429,7 @@
   </div>
   <div class="desc">
     每关对数：<span id="pairDesc">6 对</span>
+    <div id="pairHint" style="font-size:11px;color:#e9b44c;margin-top:4px;display:none;"></div>
     <div style="font-size:11px;color:#aaa;margin-top:4px;">提示：浏览器朗读音量不受下方音效音量控制</div>
   </div>
 </div>
@@ -427,8 +445,16 @@ election, 选举
 resign, 辞职
 voter, 选民"></textarea>
     <div class="modal-actions">
+      <button class="btn" id="btnImportWord">从文件导入</button>
       <button class="btn" id="btnLoadWord">加载词库</button>
       <button class="btn" id="btnCloseWord">关闭</button>
+    </div>
+    <input type="file" id="wordFile" accept=".txt,.csv,text/plain,text/csv" style="display:none">
+    <div style="font-size:11px;color:#aaa;margin-top:8px;line-height:1.7;">
+      导入支持 .txt / .csv，一行一条，英文与中文用逗号、制表符或竖线分隔，自动识别 UTF-8 与 GBK 编码。
+    </div>
+    <div class="modal-actions" style="margin-top:8px;">
+      <button class="btn" id="btnResetWord">恢复默认词库</button>
     </div>
   </div>
 </div>
@@ -576,10 +602,96 @@ voter, 选民"></textarea>
     { en: "voter", cn: "选民" }
   ];
 
+  const DEFAULT_WORDBOOK = wordbook.map(w => ({ ...w }));
+  const WB_KEY = "pengpengle_wordbook";
+
+  // 词库持久化：导入或加载后刷新/重开都还在
+  (function restoreWordbook() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(WB_KEY) || "null");
+      if (Array.isArray(saved) && saved.length >= 4 &&
+          saved.every(w => w && typeof w.en === "string" && typeof w.cn === "string" && w.en && w.cn)) {
+        wordbook = saved.map(w => ({ en: w.en, cn: w.cn }));
+      }
+    } catch (e) {}
+  })();
+
+  // 一行一条：英文, 中文（逗号/顿号/制表符/竖线/分号/空格都能分隔）
+  function parseWordbookText(text) {
+    const list = [];
+    let skipped = 0;
+    String(text).replace(/^\uFEFF/, "").split(/\r?\n/).forEach(line => {
+      const raw = line.trim();
+      if (!raw || raw.startsWith("#")) return;
+      let parts = raw.split(/\t|,|，|\||;|；/);
+      if (parts.length < 2) parts = raw.split(/\s+/);
+      const en = (parts[0] || "").trim();
+      const cn = parts.slice(1).join(" ").trim();
+      if (!en || !cn) { skipped++; return; }
+      if (list.some(w => w.en.toLowerCase() === en.toLowerCase())) { skipped++; return; }
+      list.push({ en: en, cn: cn });
+    });
+    return { list: list, skipped: skipped };
+  }
+
+  function capacityPairs() {
+    // 一个词生成一对牌（英文卡 + 中文卡），所以可用对数就是词数
+    return wordbook.length;
+  }
+
+  function saveWordbook() {
+    try { localStorage.setItem(WB_KEY, JSON.stringify(wordbook)); } catch (e) {}
+  }
+
+  function refreshPairChips() {
+    const cap = capacityPairs();
+    document.querySelectorAll(".chip").forEach(chip => {
+      const need = Number(chip.dataset.pair);
+      const off = need > cap;
+      chip.classList.toggle("disabled", off);
+      if (off) {
+        chip.setAttribute("title", "词库只有 " + wordbook.length + " 个词，最多 " + cap + " 对");
+      } else {
+        chip.removeAttribute("title");
+      }
+    });
+    if (totalPairs > cap) {
+      totalPairs = Math.max(2, cap);
+    }
+    document.querySelectorAll(".chip").forEach(c => {
+      c.classList.toggle("active", Number(c.dataset.pair) === totalPairs);
+    });
+    const desc = document.getElementById("pairDesc");
+    if (desc) desc.innerText = totalPairs + " 对";
+    const hint = document.getElementById("pairHint");
+    if (hint) {
+      if (cap < 10) {
+        hint.style.display = "block";
+        hint.innerText = "当前词库 " + wordbook.length + " 个词，最多可玩 " + cap + " 对";
+      } else {
+        hint.style.display = "none";
+        hint.innerText = "";
+      }
+    }
+    syncBoardSpace();
+  }
+
+  function syncBoardSpace() {
+    // 底部面板是 position:fixed，给牌面留出等高的下边距，20 张牌时才不会钻到面板底下
+    const panel = document.querySelector(".bottom-panel");
+    const board = document.getElementById("board");
+    if (!panel || !board) return;
+    board.style.marginBottom = (panel.offsetHeight + 26) + "px";
+  }
+
   let cards = [];
   let selected = [];
   let matchedCount = 0;
   let totalPairs = 6;
+  try {
+    const savedPairs = Number(localStorage.getItem("pengpengle_pairs"));
+    if (savedPairs >= 4) totalPairs = savedPairs;
+  } catch (e) {}
   let score = 0;
   let combo = 0;
   let startTime = null;
@@ -930,6 +1042,12 @@ voter, 选民"></textarea>
       alert("词库至少需要 4 个单词");
       return;
     }
+    // 兜底：对数不能超过词库容量，否则永远凑不满，这局就是死局
+    const cap = capacityPairs();
+    if (totalPairs > cap) {
+      totalPairs = Math.max(2, cap);
+      refreshPairChips();
+    }
 
     selected = [];
     matchedCount = 0;
@@ -950,6 +1068,8 @@ voter, 选民"></textarea>
     cards = shuffle(cards);
     updateInfo();
     renderBoard();
+    $("board").classList.toggle("dense", totalPairs >= 8);
+    syncBoardSpace();
     startTimer();
   }
 
@@ -1171,21 +1291,17 @@ voter, 选民"></textarea>
     };
 
     $("btnLoadWord").onclick = () => {
-      const lines = $("wordInput").value.split("\n").filter(Boolean);
-      const list = [];
-      lines.forEach(line => {
-        const [en, cn] = line.split(",");
-        if (en && cn) {
-          list.push({ en: en.trim(), cn: cn.trim() });
-        }
-      });
-      if (list.length < 4) {
-        alert("词库至少需要 4 个单词");
+      const parsed = parseWordbookText($("wordInput").value);
+      if (parsed.list.length < 4) {
+        alert("词库至少需要 4 个单词（每行写成「英文, 中文」）");
         return;
       }
-      wordbook = list;
+      wordbook = parsed.list;
+      saveWordbook();
       $("wordbookModal").classList.remove("show");
-      alert("词库已加载");
+      refreshPairChips();
+      startGame();
+      alert("词库已加载：" + wordbook.length + " 条" + (parsed.skipped ? "，跳过 " + parsed.skipped + " 行" : ""));
     };
 
     $("btnSetting").onclick = () => {
@@ -1214,19 +1330,66 @@ voter, 选民"></textarea>
 
     document.querySelectorAll(".chip").forEach(chip => {
       chip.onclick = () => {
+        if (chip.classList.contains("disabled")) return;
         document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
         chip.classList.add("active");
         totalPairs = Number(chip.dataset.pair);
         $("pairDesc").innerText = `${totalPairs} 对`;
+        try { localStorage.setItem("pengpengle_pairs", String(totalPairs)); } catch (e) {}
         initAudio();
         startGame();
       };
     });
+
+    $("btnImportWord").onclick = () => $("wordFile").click();
+
+    $("wordFile").onchange = (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const buf = reader.result;
+          let text = new TextDecoder("utf-8").decode(buf);
+          if (text.indexOf("\uFFFD") >= 0) {
+            try { text = new TextDecoder("gbk").decode(buf); } catch (err) {}
+          }
+          const parsed = parseWordbookText(text);
+          if (parsed.list.length < 4) {
+            alert("只解析到 " + parsed.list.length + " 条有效词条，至少需要 4 条。\n请确认每行写成「英文, 中文」。");
+            return;
+          }
+          wordbook = parsed.list;
+          saveWordbook();
+          $("wordInput").value = wordbook.map(w => `${w.en},${w.cn}`).join("\n");
+          refreshPairChips();
+          startGame();
+          alert("已导入 " + wordbook.length + " 条" + (parsed.skipped ? "，跳过 " + parsed.skipped + " 行" : ""));
+        } catch (err) {
+          alert("导入失败：" + err.message);
+        }
+      };
+      reader.onerror = () => alert("读取文件失败");
+      reader.readAsArrayBuffer(file);
+      e.target.value = "";
+    };
+
+    $("btnResetWord").onclick = () => {
+      wordbook = DEFAULT_WORDBOOK.map(w => ({ ...w }));
+      try { localStorage.removeItem(WB_KEY); } catch (e) {}
+      $("wordInput").value = wordbook.map(w => `${w.en},${w.cn}`).join("\n");
+      refreshPairChips();
+      startGame();
+      alert("已恢复默认词库");
+    };
   }
 
   bindEvents();
   loadSettingUI();
+  refreshPairChips();
   startGame();
+  window.addEventListener("resize", syncBoardSpace);
+  window.addEventListener("orientationchange", () => setTimeout(syncBoardSpace, 200));
 </script>
 
 </body>
