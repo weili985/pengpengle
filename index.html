@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>碰碰乐</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a3b2b">
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    min-height: 100vh;
+    overflow-x: hidden;
+    background: radial-gradient(circle at top, #244232 0%, #15271d 48%, #0c1a12 100%);
+    color: #f5f5f5;
+    padding: 14px;
+    padding-bottom: 120px;
+  }
+
+  :root {
+    --card: #fff8ee;
+    --card-text: #222;
+    --select: #ff4d4f;
+    --select-glow: rgba(255, 77, 79, 0.55);
+    --btn: #2f4b3c;
+    --btn-2: #3b6452;
+    --btn-active: #4fbf7a;
+    --bg-main: #1a3b2b;
+    --panel-bg: #1f4432;
+    --gold: #d8b868;
+    --gold-light: #e9d39b;
+    --border-gold: #b89c4f;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .title-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #254433;
+    border: 1px solid #3a6b52;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    color: #d8b868;
+    font-size: 18px;
+    letter-spacing: 1px;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.35), 0 4px 14px rgba(0, 0, 0, 0.35);
+  }
+
+  .title {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 1px;
+  }
+
+  .info-row-top {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .info-pill {
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .info-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .btn {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 8px;
+    border: 1px solid var(--border-gold);
+    border-radius: 10px;
+    background: linear-gradient(180deg, var(--btn), var(--btn-2));
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+
+  .btn:active {
+    transform: scale(0.96);
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 16px 0;
+  }
+
+  .card {
+    position: relative;
+    padding: 14px 8px;
+    min-height: 78px;
+    border-radius: 14px;
+    background: var(--card);
+    color: var(--card-text);
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.22s ease, box-shadow 0.25s ease, opacity 0.35s ease;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+  }
+
+  .card:active {
+    transform: scale(0.96);
+  }
+
+  .card.selected {
+    transform: translateY(-4px) scale(1.04);
+    box-shadow:
+      0 0 0 2px #ff4d4f,
+      0 0 0 6px rgba(255, 77, 79, 0.25),
+      0 18px 34px rgba(255, 77, 79, 0.45),
+      0 0 40px var(--select-glow);
+  }
+
+  .card.disappear {
+    opacity: 0;
+    transform: scale(1.25);
+    pointer-events: none;
+  }
+
+  .card.error {
+    animation: shake 0.4s ease;
+    box-shadow:
+      0 0 0 2px #ff4d4f,
+      0 0 30px rgba(255, 77, 79, 0.55);
+  }
+
+  .card-shine {
+    position: absolute;
+    top: -40%;
+    left: -40%;
+    width: 180%;
+    height: 180%;
+    background: conic-gradient(
+      from 0deg,
+      rgba(255, 255, 255, 0) 0deg,
+      rgba(255, 77, 79, 0.35) 25deg,
+      rgba(255, 255, 255, 0) 60deg
+    );
+    opacity: 0;
+    animation: shineRotate 1.6s linear infinite;
+    pointer-events: none;
+  }
+  .card.selected .card-shine {
+    opacity: 1;
+  }
+
+  .card-text {
+    position: relative;
+    z-index: 2;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+  }
+
+  @keyframes shineRotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+
+  .bottom-panel {
+    position: fixed;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    padding: 14px;
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(37, 58, 47, 0.96), rgba(21, 39, 30, 0.96));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+    z-index: 50;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: #d7f5df;
+  }
+
+  .pair-options {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .chip {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s ease;
+  }
+
+  .chip.active {
+    background: linear-gradient(180deg, var(--btn-active), #2f8f5c);
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 10px 24px rgba(79, 191, 122, 0.4);
+  }
+
+  .desc {
+    font-size: 12px;
+    line-height: 1.6;
+    color: #c7d9cd;
+  }
+
+  .modal-mask {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 16px;
+  }
+  .modal-mask.show {
+    display: flex;
+  }
+
+  .modal {
+    width: 100%;
+    max-width: 420px;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 20px;
+    border-radius: 18px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-gold);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+    color: #fff;
+  }
+
+  .modal h3 {
+    margin-bottom: 16px;
+    font-size: 18px;
+    color: var(--gold-light);
+  }
+
+  .setting-group {
+    margin-bottom: 18px;
+  }
+  .setting-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .setting-label {
+    font-size: 15px;
+    color: #e8e8e8;
+  }
+  .gold-text {
+    color: var(--gold);
+    font-weight: bold;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--gold);
+  }
+
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0;
+  }
+  .checkbox-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--gold);
+  }
+
+  .select-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 10px 0;
+  }
+  .setting-select {
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: #274b38;
+    color: #fff;
+    border: 1px solid var(--border-gold);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .btn-small {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-gold);
+    background: #274b38;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .btn-small:active {
+    background: #37634a;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="title-box">
+    <div class="logo">韦</div>
+    <div class="title">碰碰乐</div>
+  </div>
+  <div class="info-row-top">
+    <div class="info-pill" id="timerPill">用时 00:00</div>
+    <div class="info-pill" id="scorePill">得分 0</div>
+    <div class="info-pill" id="comboPill">连击 0</div>
+    <div class="info-pill" id="progressPill">进度 0/12</div>
+  </div>
+</div>
+
+<div class="info-row">
+  <button class="btn" id="btnWordbook">词库</button>
+  <button class="btn" id="btnSetting">设置</button>
+  <button class="btn" id="btnHint">提示</button>
+  <button class="btn" id="btnRestart">重开</button>
+  <button class="btn" id="btnRead">读词</button>
+</div>
+
+<div class="board" id="board"></div>
+
+<div class="bottom-panel">
+  <div class="section-title">每关对数</div>
+  <div class="pair-options" id="pairOptions">
+    <div class="chip" data-pair="4">4 对</div>
+    <div class="chip active" data-pair="6">6 对</div>
+    <div class="chip" data-pair="8">8 对</div>
+    <div class="chip" data-pair="10">10 对</div>
+  </div>
+  <div class="desc">
+    每关对数：<span id="pairDesc">6 对</span>
+    <div style="font-size:11px;color:#aaa;margin-top:4px;">提示：浏览器朗读音量不受下方音效音量控制</div>
+  </div>
+</div>
+
+<!-- 词库弹窗 -->
+<div class="modal-mask" id="wordbookModal">
+  <div class="modal">
+    <h3>词库管理</h3>
+    <textarea id="wordInput" style="width:100%;min-height:140px;padding:10px;border-radius:10px;border:1px solid var(--border-gold);background:#153024;color:#fff;resize:vertical;" placeholder="nominate, 提名
+ballot, 选票
+rally, 集会
+election, 选举
+resign, 辞职
+voter, 选民"></textarea>
+    <div class="modal-actions">
+      <button class="btn" id="btnLoadWord">加载词库</button>
+      <button class="btn" id="btnCloseWord">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 设置弹窗 -->
+<div class="modal-mask" id="settingModal">
+  <div class="modal">
+    <h3>音效与朗读</h3>
+    <div class="setting-group">
+      <div class="setting-label-row">
+        <span class="setting-label">总音效音量</span>
+        <span class="gold-text" id="volPercent">120%</span>
+      </div>
+      <input type="range" id="volSlider" min="0" max="150" value="120">
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="chkClickSound" />
+        <label>卡片点击音</label>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="chkMatchSuccess" checked />
+        <label>配对成功音</label>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="chkMatchFail" checked />
+        <label>配对失败音</label>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="chkWinSound" checked />
+        <label>通关音</label>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="chkAutoRead" checked />
+        <label>点击英文卡自动朗读</label>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="select-row">
+        <span class="setting-label">口音</span>
+        <select class="setting-select" id="selAccent">
+          <option value="en-US">美式 en-US</option>
+          <option value="en-GB">英式 en-GB</option>
+        </select>
+      </div>
+      <div class="setting-label-row">
+        <span class="setting-label">朗读语速</span>
+        <span class="gold-text" id="ratePercent">0.7</span>
+      </div>
+      <input type="range" id="rateSlider" min="0.4" max="1.4" step="0.05" value="0.7">
+    </div>
+
+    <div class="setting-group">
+      <div class="setting-label">音效测试</div>
+      <div class="btn-row">
+        <button class="btn-small" id="btnTestMatch">试听配对音</button>
+        <button class="btn-small" id="btnTestRead">试听朗读</button>
+      </div>
+    </div>
+
+    <div class="setting-group">
+      <div class="setting-label">音效风格</div>
+      <div class="select-row">
+        <span>卡片点击</span>
+        <select class="setting-select" id="selClickStyle">
+          <option value="drop">水滴</option>
+          <option value="click">轻咔</option>
+          <option value="ding">叮咚</option>
+          <option value="pop">气泡轻响</option>
+          <option value="tap">轻点</option>
+        </select>
+      </div>
+      <div class="select-row">
+        <span>配对成功</span>
+        <select class="setting-select" id="selSuccessStyle">
+          <option value="stardust">星尘碎铃 good</option>
+          <option value="wow">wow 上升</option>
+          <option value="sparkle">清脆闪光</option>
+          <option value="chime">悦耳钟声</option>
+          <option value="bright">明亮上扬</option>
+          <option value="triumph">短凯旋</option>
+        </select>
+      </div>
+      <div class="select-row">
+        <span>配对失败</span>
+        <select class="setting-select" id="selFailStyle">
+          <option value="down">低沉下滑</option>
+          <option value="thud">闷咚</option>
+          <option value="warn">刺耳警告</option>
+          <option value="buzz">嗡嗡错音</option>
+          <option value="sigh">叹气下滑</option>
+        </select>
+      </div>
+      <div class="select-row">
+        <span>通关</span>
+        <select class="setting-select" id="selWinStyle">
+          <option value="horn">铜管号角</option>
+          <option value="cheer">欢庆上扬</option>
+          <option value="bright">明亮和弦</option>
+          <option value="fanfare">短号花腔</option>
+          <option value="ascend">连续攀升</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn-small" id="btnTestClick">试听点击</button>
+        <button class="btn-small" id="btnTestSuccess">试听成功</button>
+        <button class="btn-small" id="btnTestFail">试听失败</button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" id="btnSaveSetting">保存并生效</button>
+      <button class="btn" id="btnCloseSetting">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 结算弹窗 -->
+<div class="modal-mask" id="resultModal">
+  <div class="modal" style="text-align:center">
+    <h3 id="resultTitle">🎉 通关成功</h3>
+    <p id="resultText" style="margin:10px 0 16px;font-size:14px;color:#d7f5df">用时 00:00</p>
+    <div class="modal-actions">
+      <button class="btn" id="btnReplay">再来一局</button>
+      <button class="btn" id="btnCloseResult">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js');
+    });
+  }
+
+  const $ = id => document.getElementById(id);
+
+  let wordbook = [
+    { en: "nominate", cn: "提名" },
+    { en: "ballot", cn: "选票" },
+    { en: "rally", cn: "集会" },
+    { en: "election", cn: "选举" },
+    { en: "resign", cn: "辞职" },
+    { en: "voter", cn: "选民" }
+  ];
+
+  let cards = [];
+  let selected = [];
+  let matchedCount = 0;
+  let totalPairs = 6;
+  let score = 0;
+  let combo = 0;
+  let startTime = null;
+  let timer = null;
+  let audioCtx = null;
+
+  const defaultSetting = {
+    volume: 1.2,
+    clickSound: false,
+    matchSuccess: true,
+    matchFail: true,
+    winSound: true,
+    autoRead: true,
+    accent: "en-US",
+    rate: 0.7,
+    clickStyle: "drop",
+    successStyle: "stardust",
+    failStyle: "down",
+    winStyle: "horn"
+  };
+  let setting = JSON.parse(localStorage.getItem("pengpengle_setting")) || {...defaultSetting};
+
+  function saveSettingToLocal() {
+    localStorage.setItem("pengpengle_setting", JSON.stringify(setting));
+  }
+
+  function initAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === "suspended") {
+      audioCtx.resume();
+    }
+  }
+
+  function vol(v) {
+    return Math.max(0, Math.min(1.5, v * setting.volume));
+  }
+
+  function playClickSound(style) {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    if (style === "drop") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(800, t);
+      osc.frequency.exponentialRampToValueAtTime(350, t + 0.12);
+      gain.gain.setValueAtTime(vol(0.2), t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.12);
+    } else if (style === "click") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "square";
+      osc.frequency.value = 1200;
+      gain.gain.setValueAtTime(vol(0.14), t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.06);
+    } else if (style === "ding") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 1200;
+      gain.gain.setValueAtTime(vol(0.22), t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.18);
+    } else if (style === "pop") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(600, t);
+      osc.frequency.exponentialRampToValueAtTime(180, t + 0.1);
+      gain.gain.setValueAtTime(vol(0.22), t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.1);
+    } else if (style === "tap") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 900;
+      gain.gain.setValueAtTime(vol(0.16), t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.05);
+    }
+  }
+
+  function playSuccessSound(style) {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    if (style === "stardust") {
+      const notes = [523, 659, 784, 1047];
+      notes.forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = f;
+        gain.gain.setValueAtTime(vol(0.24), t + i * 0.07);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.07 + 0.18);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t + i * 0.07);
+        osc.stop(t + i * 0.07 + 0.18);
+      })
+    } else if (style === "wow") {
+      const oscList = [520, 650, 780, 920, 1100];
+      oscList.forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(vol(0.24), t + i * 0.06);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.06 + 0.12);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t + i * 0.06);
+        osc.stop(t + i * 0.06 + 0.12);
+      })
+    } else if (style === "sparkle") {
+      for (let i = 0; i < 6; i++) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = 1400 + i * 120;
+        gain.gain.setValueAtTime(vol(0.18), t + i * 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.04 + 0.1);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t + i * 0.04);
+        osc.stop(t + i * 0.04 + 0.1);
+      }
+    } else if (style === "chime") {
+      const notes = [880, 1109, 1319];
+      notes.forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.value = f;
+        gain.gain.setValueAtTime(vol(0.24), t + i * 0.09);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.09 + 0.22);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t + i * 0.09);
+        osc.stop(t + i * 0.09 + 0.22);
+      })
+    } else if (style === "bright") {
+      const notes = [523, 659, 784, 1047, 1319];
+      notes.forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = f;
+        gain.gain.setValueAtTime(vol(0.24), t + i * 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.05 + 0.14);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t + i * 0.05);
+        osc.stop(t + i * 0.05 + 0.14);
+      })
+    } else if (style === "triumph") {
+      const notes = [523, 659, 784, 1047, 784, 659];
+      notes.forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.value = f;
+        gain.gain.setValueAtTime(vol(0.24), t + i * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.08 + 0.14);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t + i * 0.08);
+        osc.stop(t + i * 0.08 + 0.14);
+      })
+    }
+  }
+
+  function playFailSound(style) {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    if (style === "down") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(320, t);
+      osc.frequency.exponentialRampToValueAtTime(160, t + 0.22);
+      gain.gain.setValueAtTime(vol(0.2), t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.22);
+    } else if (style === "thud") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 120;
+      gain.gain.setValueAtTime(vol(0.28), t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.25);
+    } else if (style === "warn") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "square";
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(vol(0.16), t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.15);
+    } else if (style === "buzz") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.value = 180;
+      gain.gain.setValueAtTime(vol(0.22), t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.22);
+    } else if (style === "sigh") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(420, t);
+      osc.frequency.exponentialRampToValueAtTime(180, t + 0.3);
+      gain.gain.setValueAtTime(vol(0.18), t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.3);
+    }
+  }
+
+  function playWinSound(style) {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    if (style === "horn") {
+      const notes = [330, 415, 494, 659];
+      notes.forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.value = f;
+        gain.gain.setValueAtTime(vol(0.28), t + i * 0.12);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.35);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t + i * 0.12);
+        osc.stop(t + i * 0.12 + 0.35);
+      })
+    } else if (style === "cheer") {
+      const notes = [523, 659, 784, 1047, 1319];
+      notes.forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = f;
+        gain.gain.setValueAtTime(vol(0.26), t + i * 0.06);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.06 + 0.22);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t + i * 0.06);
+        osc.stop(t + i * 0.06 + 0.22);
+      })
+    } else if (style === "bright") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 1047;
+      gain.gain.setValueAtTime(vol(0.28), t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.35);
+    } else if (style === "fanfare") {
+      const notes = [523, 659, 784, 1047, 1319, 1047, 784, 659];
+      notes.forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.value = f;
+        gain.gain.setValueAtTime(vol(0.26), t + i * 0.06);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.06 + 0.12);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t + i * 0.06);
+        osc.stop(t + i * 0.06 + 0.12);
+      })
+    } else if (style === "ascend") {
+      const notes = [440, 494, 554, 587, 659, 740, 831, 988];
+      notes.forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = f;
+        gain.gain.setValueAtTime(vol(0.24), t + i * 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.05 + 0.12);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t + i * 0.05);
+        osc.stop(t + i * 0.05 + 0.12);
+      })
+    }
+  }
+
+  function speak(text) {
+    if (!setting.autoRead) return;
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = setting.accent;
+    utt.rate = setting.rate;
+    speechSynthesis.speak(utt);
+  }
+
+  function shuffle(arr) {
+    return arr.sort(() => Math.random() - 0.5);
+  }
+
+  function updateInfo() {
+    $("scorePill").innerText = `得分 ${score}`;
+    $("comboPill").innerText = `连击 ${combo}`;
+    $("progressPill").innerText = `进度 ${matchedCount}/${totalPairs}`;
+  }
+
+  function startGame() {
+    if (wordbook.length < 4) {
+      alert("词库至少需要 4 个单词");
+      return;
+    }
+
+    selected = [];
+    matchedCount = 0;
+    score = 0;
+    combo = 0;
+    clearInterval(timer);
+    startTime = Date.now();
+    $("resultModal").classList.remove("show");
+
+    const list = shuffle(wordbook).slice(0, totalPairs);
+    cards = [];
+
+    list.forEach(item => {
+      cards.push({ id: Math.random().toString(36).slice(2), text: item.en, type: "en", pair: item.cn, disappear: false });
+      cards.push({ id: Math.random().toString(36).slice(2), text: item.cn, type: "cn", pair: item.en, disappear: false });
+    });
+
+    cards = shuffle(cards);
+    updateInfo();
+    renderBoard();
+    startTimer();
+  }
+
+  function renderBoard() {
+    const board = $("board");
+    board.innerHTML = "";
+
+    cards.forEach((card, idx) => {
+      const div = document.createElement("div");
+      div.className = "card";
+      div.dataset.index = idx;
+      if (card.disappear) div.classList.add("disappear");
+      if (selected.includes(idx)) div.classList.add("selected");
+
+      div.innerHTML = `
+        <div class="card-shine"></div>
+        <div class="card-text">${card.text}</div>
+      `;
+      div.onclick = () => clickCard(idx);
+      board.appendChild(div);
+    });
+  }
+
+  function clickCard(idx) {
+    initAudio();
+    const card = cards[idx];
+    if (card.disappear) return;
+    if (selected.includes(idx)) return;
+    if (selected.length >= 2) return;
+
+    if (setting.clickSound) playClickSound(setting.clickStyle);
+    if (card.type === "en") speak(card.text);
+    selected.push(idx);
+    renderBoard();
+
+    if (selected.length === 2) {
+      checkMatch();
+    }
+  }
+
+  function checkMatch() {
+    const [a, b] = selected;
+    const cardA = cards[a];
+    const cardB = cards[b];
+
+    if (cardA.pair === cardB.text && cardB.pair === cardA.text) {
+      setTimeout(() => {
+        if (setting.matchSuccess) playSuccessSound(setting.successStyle);
+        cardA.disappear = true;
+        cardB.disappear = true;
+        selected = [];
+        matchedCount++;
+        combo++;
+        score += 10 * combo;
+        updateInfo();
+        renderBoard();
+
+        if (matchedCount === totalPairs) {
+          clearInterval(timer);
+          if (setting.winSound) playWinSound(setting.winStyle);
+          setTimeout(showResult, 400);
+        }
+      }, 280);
+    } else {
+      if (setting.matchFail) playFailSound(setting.failStyle);
+      combo = 0;
+      updateInfo();
+      document.querySelectorAll(".card").forEach(el => {
+        const i = Number(el.dataset.index);
+        if (selected.includes(i)) el.classList.add("error");
+      });
+
+      setTimeout(() => {
+        selected = [];
+        document.querySelectorAll(".card").forEach(el => el.classList.remove("error"));
+        renderBoard();
+      }, 650);
+    }
+  }
+
+  function startTimer() {
+    timer = setInterval(() => {
+      const s = Math.floor((Date.now() - startTime) / 1000);
+      const m = String(Math.floor(s / 60)).padStart(2, "0");
+      const ss = String(s % 60).padStart(2, "0");
+      $("timerPill").innerText = `用时 ${m}:${ss}`;
+    }, 500);
+  }
+
+  function showResult() {
+    const s = Math.floor((Date.now() - startTime) / 1000);
+    const m = String(Math.floor(s / 60)).padStart(2, "0");
+    const ss = String(s % 60).padStart(2, "0");
+    $("resultTitle").innerText = "🎉 通关成功";
+    $("resultText").innerText = `用时 ${m}:${ss}，最终得分：${score}`;
+    $("resultModal").classList.add("show");
+  }
+
+  function loadSettingUI() {
+    $("volSlider").value = Math.round(setting.volume * 100);
+    $("volPercent").innerText = Math.round(setting.volume * 100) + "%";
+    $("chkClickSound").checked = setting.clickSound;
+    $("chkMatchSuccess").checked = setting.matchSuccess;
+    $("chkMatchFail").checked = setting.matchFail;
+    $("chkWinSound").checked = setting.winSound;
+    $("chkAutoRead").checked = setting.autoRead;
+    $("selAccent").value = setting.accent;
+    $("rateSlider").value = setting.rate;
+    $("ratePercent").innerText = setting.rate.toFixed(2);
+    $("selClickStyle").value = setting.clickStyle;
+    $("selSuccessStyle").value = setting.successStyle;
+    $("selFailStyle").value = setting.failStyle;
+    $("selWinStyle").value = setting.winStyle;
+  }
+
+  function saveSettingFromUI() {
+    setting.volume = Number($("volSlider").value) / 100;
+    setting.clickSound = $("chkClickSound").checked;
+    setting.matchSuccess = $("chkMatchSuccess").checked;
+    setting.matchFail = $("chkMatchFail").checked;
+    setting.winSound = $("chkWinSound").checked;
+    setting.autoRead = $("chkAutoRead").checked;
+    setting.accent = $("selAccent").value;
+    setting.rate = Number($("rateSlider").value);
+    setting.clickStyle = $("selClickStyle").value;
+    setting.successStyle = $("selSuccessStyle").value;
+    setting.failStyle = $("selFailStyle").value;
+    setting.winStyle = $("selWinStyle").value;
+    saveSettingToLocal();
+  }
+
+  function getUISetting() {
+    return {
+      volume: Number($("volSlider").value) / 100,
+      clickStyle: $("selClickStyle").value,
+      successStyle: $("selSuccessStyle").value,
+      failStyle: $("selFailStyle").value,
+      winStyle: $("selWinStyle").value,
+      accent: $("selAccent").value,
+      rate: Number($("rateSlider").value)
+    }
+  }
+
+  function bindEvents() {
+    $("volSlider").oninput = () => {
+      $("volPercent").innerText = $("volSlider").value + "%";
+    };
+    $("rateSlider").oninput = () => {
+      $("ratePercent").innerText = Number($("rateSlider").value).toFixed(2);
+    };
+
+    $("btnTestClick").onclick = () => {
+      initAudio();
+      const ui = getUISetting();
+      const oldVol = setting.volume;
+      setting.volume = ui.volume;
+      playClickSound(ui.clickStyle);
+      setting.volume = oldVol;
+    };
+    $("btnTestSuccess").onclick = () => {
+      initAudio();
+      const ui = getUISetting();
+      const oldVol = setting.volume;
+      setting.volume = ui.volume;
+      playSuccessSound(ui.successStyle);
+      setting.volume = oldVol;
+    };
+    $("btnTestFail").onclick = () => {
+      initAudio();
+      const ui = getUISetting();
+      const oldVol = setting.volume;
+      setting.volume = ui.volume;
+      playFailSound(ui.failStyle);
+      setting.volume = oldVol;
+    };
+    $("btnTestMatch").onclick = () => {
+      initAudio();
+      const ui = getUISetting();
+      const oldVol = setting.volume;
+      setting.volume = ui.volume;
+      playSuccessSound(ui.successStyle);
+      setting.volume = oldVol;
+    };
+    $("btnTestRead").onclick = () => {
+      const ui = getUISetting();
+      const utt = new SpeechSynthesisUtterance("welcome");
+      utt.lang = ui.accent;
+      utt.rate = ui.rate;
+      speechSynthesis.speak(utt);
+    };
+
+    $("btnRestart").onclick = () => {
+      initAudio();
+      startGame();
+    };
+
+    $("btnHint").onclick = () => {
+      const firstValid = cards.findIndex(c => !c.disappear);
+      if (firstValid === -1) return;
+      const card = cards[firstValid];
+      alert(`提示："${card.text}" 的对应词是 "${card.pair}"`);
+    };
+
+    $("btnRead").onclick = () => {
+      cards.forEach((card, i) => {
+        if (card.type === "en" && !card.disappear) {
+          setTimeout(() => speak(card.text), i * 700);
+        }
+      });
+    };
+
+    $("btnWordbook").onclick = () => {
+      $("wordInput").value = wordbook.map(w => `${w.en},${w.cn}`).join("\n");
+      $("wordbookModal").classList.add("show");
+    };
+
+    $("btnCloseWord").onclick = () => {
+      $("wordbookModal").classList.remove("show");
+    };
+
+    $("btnLoadWord").onclick = () => {
+      const lines = $("wordInput").value.split("\n").filter(Boolean);
+      const list = [];
+      lines.forEach(line => {
+        const [en, cn] = line.split(",");
+        if (en && cn) {
+          list.push({ en: en.trim(), cn: cn.trim() });
+        }
+      });
+      if (list.length < 4) {
+        alert("词库至少需要 4 个单词");
+        return;
+      }
+      wordbook = list;
+      $("wordbookModal").classList.remove("show");
+      alert("词库已加载");
+    };
+
+    $("btnSetting").onclick = () => {
+      loadSettingUI();
+      $("settingModal").classList.add("show");
+    };
+
+    $("btnCloseSetting").onclick = () => {
+      $("settingModal").classList.remove("show");
+    };
+
+    $("btnSaveSetting").onclick = () => {
+      saveSettingFromUI();
+      alert("✅ 设置已保存并生效！");
+      $("settingModal").classList.remove("show");
+    };
+
+    $("btnReplay").onclick = () => {
+      initAudio();
+      startGame();
+    };
+
+    $("btnCloseResult").onclick = () => {
+      $("resultModal").classList.remove("show");
+    };
+
+    document.querySelectorAll(".chip").forEach(chip => {
+      chip.onclick = () => {
+        document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+        chip.classList.add("active");
+        totalPairs = Number(chip.dataset.pair);
+        $("pairDesc").innerText = `${totalPairs} 对`;
+        initAudio();
+        startGame();
+      };
+    });
+  }
+
+  bindEvents();
+  loadSettingUI();
+  startGame();
+</script>
+
+</body>
+</html>
