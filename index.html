@@ -675,7 +675,6 @@
         <span class="switch-track"></span>
       </label>
     </div>
-    <span class="voice-link" id="btnMyVoice">我的声音 ›</span>
   </div>
 </div>
 
@@ -691,11 +690,6 @@
   </div>
   <div class="restart-row">
     <button class="btn-restart" id="btnRestart">重开</button>
-  </div>
-  <div class="desc">
-    每关对数：<span id="pairDesc">6 对</span>
-    <div id="pairHint" style="font-size:11px;color:#e9b44c;margin-top:4px;display:none;"></div>
-    <div style="font-size:11px;color:#aaa;margin-top:4px;">提示：浏览器朗读音量不受下方音效音量控制；在「读词 › 我的声音」里可以换成自己录的声音</div>
   </div>
 </div>
 
@@ -837,6 +831,9 @@ voter, 选民"></textarea>
         <button class="btn-small" id="btnTestClick">试听点击</button>
         <button class="btn-small" id="btnTestSuccess">试听成功</button>
         <button class="btn-small" id="btnTestFail">试听失败</button>
+      </div>
+      <div style="margin-top:14px;">
+        <button class="btn" id="btnVoiceEntry" style="width:100%;font-size:16px;">我的声音（录自己的读音）›</button>
       </div>
     </div>
 
@@ -2123,12 +2120,21 @@ voter, 选民"></textarea>
       }
     };
 
-    // 进"我的声音"录音面板
-    $("btnMyVoice").onclick = () => {
+    // 进"我的声音"录音面板（入口已挪到「设置」里）
+    const openVoicePanel = () => {
       setRecState("");
       renderVoiceList();
       $("voiceModal").classList.add("show");
     };
+    if ($("btnMyVoice")) $("btnMyVoice").onclick = openVoicePanel;
+    if ($("btnVoiceEntry")) {
+      $("btnVoiceEntry").onclick = () => {
+        $("settingModal").classList.remove("show");
+        initAudio();
+        if (setting.clickSound) playClickSound(setting.clickStyle);
+        openVoicePanel();
+      };
+    }
     $("btnCloseVoice").onclick = () => {
       stopRec();
       $("voiceModal").classList.remove("show");
@@ -2233,7 +2239,7 @@ voter, 选民"></textarea>
         document.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
         chip.classList.add("active");
         totalPairs = Number(chip.dataset.pair);
-        $("pairDesc").innerText = `${totalPairs} 对`;
+        if ($("pairDesc")) $("pairDesc").innerText = `${totalPairs} 对`;
         try { localStorage.setItem("pengpengle_pairs", String(totalPairs)); } catch (e) {}
         initAudio();
         startGame();
