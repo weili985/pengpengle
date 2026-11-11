@@ -29,8 +29,9 @@
   }
 
   :root {
-    --card: #fff8ee;
+    --card: #ffe3e3;
     --card-text: #222;
+    --card-en-text: #9575cd;
     --select: #ff4d4f;
     --select-glow: rgba(255, 77, 79, 0.55);
     --btn: #2f4b3c;
@@ -118,6 +119,77 @@
     transform: scale(0.96);
   }
 
+  /* 底部正中的「重开」按钮 */
+  .restart-row {
+    display: flex;
+    justify-content: center;
+    margin: 10px 0 6px;
+  }
+
+  .btn-restart {
+    min-width: 132px;
+    padding: 10px 24px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    background: linear-gradient(180deg, #3b6452, #2f4b3c);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+    transition: transform 0.12s ease, box-shadow 0.2s ease;
+  }
+
+  .btn-restart:active {
+    transform: scale(0.97);
+  }
+
+  /* 「读词」后面的开关 */
+  .read-switch {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    padding: 0 2px;
+    cursor: pointer;
+  }
+
+  .read-switch input {
+    display: none;
+  }
+
+  .switch-track {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+
+  .switch-track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #c9d6ce;
+    transition: left 0.2s ease, background 0.2s ease;
+  }
+
+  .read-switch input:checked + .switch-track {
+    background: linear-gradient(180deg, var(--btn-active), #2f8f5c);
+    border-color: rgba(255, 255, 255, 0.35);
+  }
+
+  .read-switch input:checked + .switch-track::after {
+    left: 22px;
+    background: #fff;
+  }
+
   .board {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -158,6 +230,10 @@
 
   .card:active {
     transform: scale(0.96);
+  }
+
+  .card.card-en .card-text {
+    color: var(--card-en-text);
   }
 
   .card.selected {
@@ -413,8 +489,11 @@
   <button class="btn" id="btnWordbook">词库</button>
   <button class="btn" id="btnSetting">设置</button>
   <button class="btn" id="btnHint">提示</button>
-  <button class="btn" id="btnRestart">重开</button>
   <button class="btn" id="btnRead">读词</button>
+  <label class="read-switch" id="readSwitchWrap" title="自动朗读开关：点英文卡是否自动朗读">
+    <input type="checkbox" id="chkReadSwitch" checked>
+    <span class="switch-track"></span>
+  </label>
 </div>
 
 <div class="board" id="board"></div>
@@ -426,6 +505,9 @@
     <div class="chip active" data-pair="6">6 对</div>
     <div class="chip" data-pair="8">8 对</div>
     <div class="chip" data-pair="10">10 对</div>
+  </div>
+  <div class="restart-row">
+    <button class="btn-restart" id="btnRestart">重开</button>
   </div>
   <div class="desc">
     每关对数：<span id="pairDesc">6 对</span>
@@ -525,6 +607,9 @@ voter, 选民"></textarea>
           <option value="ding">叮咚</option>
           <option value="pop">气泡轻响</option>
           <option value="tap">轻点</option>
+          <option value="wood">木鱼叩响</option>
+          <option value="bell">小铜铃</option>
+          <option value="marimba">马林巴</option>
         </select>
       </div>
       <div class="select-row">
@@ -536,6 +621,9 @@ voter, 选民"></textarea>
           <option value="chime">悦耳钟声</option>
           <option value="bright">明亮上扬</option>
           <option value="triumph">短凯旋</option>
+          <option value="glide">柔滑上滑</option>
+          <option value="stack">叠音三连</option>
+          <option value="harp">竖琴扫弦</option>
         </select>
       </div>
       <div class="select-row">
@@ -546,6 +634,8 @@ voter, 选民"></textarea>
           <option value="warn">刺耳警告</option>
           <option value="buzz">嗡嗡错音</option>
           <option value="sigh">叹气下滑</option>
+          <option value="lowbuzz">低频嗡鸣</option>
+          <option value="doublefall">双段下滑</option>
         </select>
       </div>
       <div class="select-row">
@@ -556,6 +646,8 @@ voter, 选民"></textarea>
           <option value="bright">明亮和弦</option>
           <option value="fanfare">短号花腔</option>
           <option value="ascend">连续攀升</option>
+          <option value="epic">厚重复调</option>
+          <option value="longbell">喜钟长鸣</option>
         </select>
       </div>
       <div class="btn-row">
@@ -791,6 +883,41 @@ voter, 选民"></textarea>
       gain.connect(audioCtx.destination);
       osc.start(t);
       osc.stop(t + 0.05);
+    } else if (style === "wood") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(620, t);
+      osc.frequency.exponentialRampToValueAtTime(430, t + 0.09);
+      gain.gain.setValueAtTime(vol(0.2), t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.09);
+    } else if (style === "bell") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 1560;
+      gain.gain.setValueAtTime(vol(0.2), t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.22);
+    } else if (style === "marimba") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(880, t);
+      osc.frequency.exponentialRampToValueAtTime(520, t + 0.14);
+      gain.gain.setValueAtTime(vol(0.18), t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.14);
     }
   }
 
@@ -880,6 +1007,46 @@ voter, 选民"></textarea>
         osc.start(t + i * 0.08);
         osc.stop(t + i * 0.08 + 0.14);
       })
+    } else if (style === "glide") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(420, t);
+      osc.frequency.exponentialRampToValueAtTime(1180, t + 0.32);
+      gain.gain.setValueAtTime(vol(0.22), t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.34);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.34);
+    } else if (style === "stack") {
+      const notes = [784, 988, 1175];
+      notes.forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = f;
+        gain.gain.setValueAtTime(vol(0.22), t + i * 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.03 + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t + i * 0.03);
+        osc.stop(t + i * 0.03 + 0.2);
+      })
+    } else if (style === "harp") {
+      const notes = [659, 880, 1047, 1319];
+      notes.forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.value = f;
+        gain.gain.setValueAtTime(vol(0.2), t + i * 0.035);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.035 + 0.26);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t + i * 0.035);
+        osc.stop(t + i * 0.035 + 0.26);
+      })
     }
   }
 
@@ -943,6 +1110,31 @@ voter, 选民"></textarea>
       gain.connect(audioCtx.destination);
       osc.start(t);
       osc.stop(t + 0.3);
+    } else if (style === "lowbuzz") {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.value = 92;
+      gain.gain.setValueAtTime(vol(0.2), t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + 0.4);
+    } else if (style === "doublefall") {
+      [[520, 300, 0], [360, 170, 0.22]].forEach(([f1, f2, d]) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(f1, t + d);
+        osc.frequency.exponentialRampToValueAtTime(f2, t + d + 0.18);
+        gain.gain.setValueAtTime(vol(0.18), t + d);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + d + 0.18);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t + d);
+        osc.stop(t + d + 0.18);
+      })
     }
   }
 
@@ -1016,11 +1208,40 @@ voter, 选民"></textarea>
         osc.start(t + i * 0.05);
         osc.stop(t + i * 0.05 + 0.12);
       })
+    } else if (style === "epic") {
+      [[392, 523, 659], [494, 659, 784]].forEach((chord, k) => {
+        chord.forEach((f) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = "triangle";
+          osc.frequency.value = f;
+          gain.gain.setValueAtTime(vol(0.2), t + k * 0.28);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + k * 0.28 + 0.7);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(t + k * 0.28);
+          osc.stop(t + k * 0.28 + 0.7);
+        })
+      })
+    } else if (style === "longbell") {
+      const notes = [1047, 1319];
+      notes.forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = f;
+        gain.gain.setValueAtTime(vol(0.24), t + i * 0.06);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.06 + 1.1);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t + i * 0.06);
+        osc.stop(t + i * 0.06 + 1.1);
+      })
     }
   }
 
-  function speak(text) {
-    if (!setting.autoRead) return;
+  function speak(text, force) {
+    if (!force && !setting.autoRead) return;
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = setting.accent;
     utt.rate = setting.rate;
@@ -1080,6 +1301,7 @@ voter, 选民"></textarea>
     cards.forEach((card, idx) => {
       const div = document.createElement("div");
       div.className = "card";
+      if (card.type === "en") div.classList.add("card-en");
       div.dataset.index = idx;
       if (card.disappear) div.classList.add("disappear");
       if (selected.includes(idx)) div.classList.add("selected");
@@ -1176,6 +1398,7 @@ voter, 选民"></textarea>
     $("chkMatchFail").checked = setting.matchFail;
     $("chkWinSound").checked = setting.winSound;
     $("chkAutoRead").checked = setting.autoRead;
+    if ($("chkReadSwitch")) $("chkReadSwitch").checked = setting.autoRead;
     $("selAccent").value = setting.accent;
     $("rateSlider").value = setting.rate;
     $("ratePercent").innerText = setting.rate.toFixed(2);
@@ -1192,6 +1415,7 @@ voter, 选民"></textarea>
     setting.matchFail = $("chkMatchFail").checked;
     setting.winSound = $("chkWinSound").checked;
     setting.autoRead = $("chkAutoRead").checked;
+    if ($("chkReadSwitch")) $("chkReadSwitch").checked = setting.autoRead;
     setting.accent = $("selAccent").value;
     setting.rate = Number($("rateSlider").value);
     setting.clickStyle = $("selClickStyle").value;
@@ -1276,9 +1500,19 @@ voter, 选民"></textarea>
     $("btnRead").onclick = () => {
       cards.forEach((card, i) => {
         if (card.type === "en" && !card.disappear) {
-          setTimeout(() => speak(card.text), i * 700);
+          setTimeout(() => speak(card.text, true), i * 700);
         }
       });
+    };
+
+    // 「读词」后面的开关：控制点击英文卡是否自动朗读（与设置里的同名选项联动）
+    $("chkReadSwitch").onchange = () => {
+      setting.autoRead = $("chkReadSwitch").checked;
+      $("chkAutoRead").checked = setting.autoRead;
+      saveSettingToLocal();
+      if (setting.autoRead) {
+        initAudio();
+      }
     };
 
     $("btnWordbook").onclick = () => {
