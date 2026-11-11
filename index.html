@@ -208,6 +208,96 @@
     left: 18px;
   }
 
+  /* 「读词」按钮里再加一行：进"我的声音"录音面板 */
+  .btn-split {
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px 4px 5px;
+  }
+  .btn-split .read-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .info-row {
+    align-items: center;
+  }
+
+  .voice-link {
+    font-size: 11px;
+    line-height: 1.1;
+    color: var(--gold-light);
+    white-space: nowrap;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .voice-link:active {
+    opacity: 0.6;
+  }
+
+  /* 我的声音 · 录音面板 */
+  .voice-tip {
+    font-size: 11px;
+    line-height: 1.6;
+    color: #a9c2b2;
+    margin-bottom: 8px;
+  }
+  .voice-list {
+    max-height: 42vh;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    padding-right: 2px;
+  }
+  .voice-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 8px;
+    margin-bottom: 6px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .voice-word {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .voice-word b {
+    font-size: 14px;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .voice-word span {
+    font-size: 11px;
+    color: #a9c2b2;
+  }
+  .voice-dur {
+    font-size: 11px;
+    color: #8fa89a;
+    white-space: nowrap;
+  }
+  .voice-dur.has {
+    color: #7de2a8;
+  }
+  .voice-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .voice-btns .btn-small {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  .voice-btns .btn-small.recording {
+    background: linear-gradient(180deg, #ff6b6b, #d63b3b);
+    border-color: #ff9a9a;
+  }
+
   .read-switch input {
     display: none;
   }
@@ -544,11 +634,14 @@
   <button class="btn" id="btnSetting">设置</button>
   <button class="btn" id="btnHint">提示</button>
   <div class="btn-split" id="readGroup">
-    <span class="btn-split-label" id="btnRead">读词</span>
-    <label class="read-switch" id="readSwitchWrap" title="读词开关：关掉后不再朗读">
-      <input type="checkbox" id="chkReadSwitch" checked>
-      <span class="switch-track"></span>
-    </label>
+    <div class="read-line">
+      <span class="btn-split-label" id="btnRead">读词</span>
+      <label class="read-switch" id="readSwitchWrap" title="读词开关：关掉后不再朗读">
+        <input type="checkbox" id="chkReadSwitch" checked>
+        <span class="switch-track"></span>
+      </label>
+    </div>
+    <span class="voice-link" id="btnMyVoice">我的声音 ›</span>
   </div>
 </div>
 
@@ -568,7 +661,7 @@
   <div class="desc">
     每关对数：<span id="pairDesc">6 对</span>
     <div id="pairHint" style="font-size:11px;color:#e9b44c;margin-top:4px;display:none;"></div>
-    <div style="font-size:11px;color:#aaa;margin-top:4px;">提示：浏览器朗读音量不受下方音效音量控制</div>
+    <div style="font-size:11px;color:#aaa;margin-top:4px;">提示：浏览器朗读音量不受下方音效音量控制；在「读词 › 我的声音」里可以换成自己录的声音</div>
   </div>
 </div>
 
@@ -717,6 +810,23 @@ voter, 选民"></textarea>
       <button class="btn" id="btnSaveSetting">保存并生效</button>
       <button class="btn" id="btnCloseSetting">关闭</button>
     </div>
+  </div>
+</div>
+
+<!-- 我的声音：录音面板 -->
+<div class="modal-mask" id="voiceModal">
+  <div class="modal">
+    <h3>我的声音</h3>
+    <div class="voice-tip">
+      录过的词会用你的录音，没录的仍用系统朗读。录音只存在这台设备上，不会上传，换设备或清缓存会丢。
+      每次最多录 6 秒，建议只读单词本身。
+    </div>
+    <div class="voice-list" id="voiceList"></div>
+    <div class="modal-actions">
+      <button class="btn" id="btnVoiceClear">清空全部录音</button>
+      <button class="btn" id="btnCloseVoice">关闭</button>
+    </div>
+    <div class="voice-tip" id="voiceRecState" style="margin:8px 0 0;color:#e9b44c;"></div>
   </div>
 </div>
 
@@ -1296,12 +1406,281 @@ voter, 选民"></textarea>
     }
   }
 
-  function speak(text) {
-    if (!setting.autoRead) return;
+  function ttsSpeak(text) {
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = setting.accent;
     utt.rate = setting.rate;
     speechSynthesis.speak(utt);
+  }
+
+  /* ---------- 我的声音：把每个词的朗读换成自己的录音 ---------- */
+  const VDB_NAME = "pengpengle_voice";
+  const VSTORE = "voices";
+  const voiceCache = new Map();   // 英文词 -> blob，内存缓存避免每次都读库
+
+  function vdbOpen() {
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) { reject(new Error("这个环境不支持本地音频库")); return; }
+      const rq = indexedDB.open(VDB_NAME, 1);
+      rq.onupgradeneeded = () => {
+        const db = rq.result;
+        if (!db.objectStoreNames.contains(VSTORE)) db.createObjectStore(VSTORE);
+      };
+      rq.onsuccess = () => resolve(rq.result);
+      rq.onerror = () => reject(rq.error);
+    });
+  }
+
+  function vdbTx(mode) {
+    return vdbOpen().then(db => db.transaction(VSTORE, mode).objectStore(VSTORE));
+  }
+
+  function voiceKey(en) {
+    return String(en || "").trim().toLowerCase();
+  }
+
+  function voiceKeys() {
+    return vdbTx("readonly").then(store => new Promise((resolve, reject) => {
+      const rq = store.getAllKeys();
+      rq.onsuccess = () => resolve((rq.result || []).map(String));
+      rq.onerror = () => reject(rq.error);
+    }));
+  }
+
+  function voiceGet(en) {
+    const key = voiceKey(en);
+    if (voiceCache.has(key)) return Promise.resolve(voiceCache.get(key));
+    return vdbTx("readonly").then(store => new Promise(resolve => {
+      const rq = store.get(key);
+      rq.onsuccess = () => {
+        const rec = rq.result;
+        const blob = rec && rec.blob ? rec.blob : null;
+        if (blob) voiceCache.set(key, blob);
+        resolve(blob);
+      };
+      rq.onerror = () => resolve(null);
+    })).catch(() => null);
+  }
+
+  function voicePut(en, blob, meta) {
+    const key = voiceKey(en);
+    voiceCache.set(key, blob);
+    return vdbTx("readwrite").then(store => new Promise((resolve, reject) => {
+      const rq = store.put({ blob, mime: (meta && meta.mime) || blob.type || "", dur: (meta && meta.dur) || 0, ts: Date.now() }, key);
+      rq.onsuccess = () => resolve(true);
+      rq.onerror = () => reject(rq.error);
+    }));
+  }
+
+  function voiceDelete(en) {
+    const key = voiceKey(en);
+    voiceCache.delete(key);
+    return vdbTx("readwrite").then(store => new Promise((resolve, reject) => {
+      const rq = store.delete(key);
+      rq.onsuccess = () => resolve(true);
+      rq.onerror = () => reject(rq.error);
+    }));
+  }
+
+  function voiceClear() {
+    voiceCache.clear();
+    return vdbTx("readwrite").then(store => new Promise((resolve, reject) => {
+      const rq = store.clear();
+      rq.onsuccess = () => resolve(true);
+      rq.onerror = () => reject(rq.error);
+    }));
+  }
+
+  // 播放一段录音，返回"播完"的 Promise（超时兜底，避免卡住读词流程）
+  function playVoiceBlob(blob, maxMs) {
+    return new Promise(resolve => {
+      let done = false, url = "";
+      const finish = () => {
+        if (done) return;
+        done = true;
+        if (url) setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 500);
+        resolve();
+      };
+      try {
+        url = URL.createObjectURL(blob);
+        const a = new Audio(url);
+        a.onended = finish;
+        a.onerror = finish;
+        const p = a.play();
+        if (p && p.catch) p.catch(finish);
+        setTimeout(() => { try { a.pause(); } catch (e) {} finish(); }, maxMs || 9000);
+      } catch (e) {
+        finish();
+      }
+    });
+  }
+
+  // 录音状态
+  let recStream = null;
+  let recMedia = null;
+  let recChunks = [];
+  let recWord = "";
+  let recStartAt = 0;
+  let recTimer = null;
+
+  function pickVoiceMime() {
+    const cands = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus", "audio/aac"];
+    if (!window.MediaRecorder || !MediaRecorder.isTypeSupported) return "";
+    for (const m of cands) { if (MediaRecorder.isTypeSupported(m)) return m; }
+    return "";
+  }
+
+  function setRecState(msg) {
+    const el = $("voiceRecState");
+    if (el) el.innerText = msg || "";
+  }
+
+  function stopRec() {
+    if (recTimer) { clearTimeout(recTimer); recTimer = null; }
+    if (recMedia && recMedia.state !== "inactive") {
+      try { recMedia.stop(); } catch (e) {}
+    }
+  }
+
+  function releaseMic() {
+    if (recStream) {
+      recStream.getTracks().forEach(t => { try { t.stop(); } catch (e) {} });
+      recStream = null;
+    }
+  }
+
+  function startRec(en) {
+    if (recWord) { stopRec(); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert("这个环境不支持录音（需要用手机浏览器、Chrome 或安卓版碰碰乐）");
+      return;
+    }
+    if (!window.MediaRecorder) {
+      alert("这个环境不支持录音（MediaRecorder 不可用）");
+      return;
+    }
+    setRecState("正在准备麦克风…请允许权限");
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      recStream = stream;
+      recChunks = [];
+      recWord = en;
+      const mime = pickVoiceMime();
+      try {
+        recMedia = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      } catch (e) {
+        try { recMedia = new MediaRecorder(stream); } catch (e2) {
+          releaseMic(); recWord = ""; setRecState("");
+          alert("录音启动失败：" + e2.message);
+          return;
+        }
+      }
+      recMedia.ondataavailable = ev => { if (ev.data && ev.data.size) recChunks.push(ev.data); };
+      recMedia.onstop = () => {
+        const dur = Math.round((Date.now() - recStartAt) / 10) / 100;
+        const blob = new Blob(recChunks, { type: recMedia.mimeType || "audio/webm" });
+        const word = recWord;
+        recChunks = [];
+        recMedia = null;
+        recWord = "";
+        releaseMic();
+        if (!blob.size) { setRecState("没录到声音，检查一下麦克风"); renderVoiceList(); return; }
+        if (word) {
+          voicePut(word, blob, { mime: blob.type, dur }).then(() => {
+            setRecState(`已保存「${word}」的录音（${dur.toFixed(1)} 秒）`);
+            renderVoiceList();
+          }).catch(err => {
+            setRecState("保存失败：" + err.message);
+            renderVoiceList();
+          });
+        }
+      };
+      recStartAt = Date.now();
+      try {
+        recMedia.start();
+        setRecState(`正在录音：${en}（最多 6 秒，再点一次"停止"提前结束）`);
+      } catch (e) {
+        releaseMic(); recWord = ""; recMedia = null;
+        alert("录音启动失败：" + e.message);
+        return;
+      }
+      recTimer = setTimeout(stopRec, 6000);
+      renderVoiceList();
+    }).catch(err => {
+      setRecState("");
+      const n = (err && (err.name || err.message)) || "未知错误";
+      alert("没拿到麦克风权限（" + n + "）。\n请允许麦克风后再试；安卓版第一次点会弹系统授权。");
+    });
+  }
+
+  async function renderVoiceList() {
+    const el = $("voiceList");
+    if (!el) return;
+    let keys = [];
+    try { keys = await voiceKeys(); } catch (e) { keys = [...voiceCache.keys()]; }
+    el.innerHTML = "";
+    if (!wordbook.length) {
+      el.innerHTML = '<div class="voice-tip">词库是空的</div>';
+      return;
+    }
+    wordbook.forEach(w => {
+      const has = keys.includes(voiceKey(w.en));
+      const recording = recWord && voiceKey(recWord) === voiceKey(w.en);
+      const row = document.createElement("div");
+      row.className = "voice-row";
+      const left = document.createElement("div");
+      left.className = "voice-word";
+      left.innerHTML = `<b></b><span></span>`;
+      left.querySelector("b").textContent = w.en;
+      left.querySelector("span").textContent = w.cn;
+      const dur = document.createElement("div");
+      dur.className = "voice-dur" + (has ? " has" : "");
+      dur.textContent = has ? "已录" : "未录";
+      const btns = document.createElement("div");
+      btns.className = "voice-btns";
+
+      const bRec = document.createElement("button");
+      bRec.className = "btn-small" + (recording ? " recording" : "");
+      bRec.textContent = recording ? "停止" : "录音";
+      bRec.onclick = () => startRec(w.en);
+
+      const bPlay = document.createElement("button");
+      bPlay.className = "btn-small";
+      bPlay.textContent = "试听";
+      bPlay.onclick = () => {
+        voiceGet(w.en).then(blob => {
+          if (blob) playVoiceBlob(blob);
+          else ttsSpeak(w.en);
+        });
+      };
+
+      const bDel = document.createElement("button");
+      bDel.className = "btn-small";
+      bDel.textContent = "删除";
+      bDel.onclick = () => {
+        voiceDelete(w.en).then(() => {
+          setRecState(`已删除「${w.en}」的录音`);
+          renderVoiceList();
+        });
+      };
+
+      btns.appendChild(bRec);
+      btns.appendChild(bPlay);
+      btns.appendChild(bDel);
+      row.appendChild(left);
+      row.appendChild(dur);
+      row.appendChild(btns);
+      el.appendChild(row);
+    });
+  }
+
+  async function speak(text) {
+    if (!setting.autoRead) return;
+    const blob = await voiceGet(text);
+    if (blob) {
+      await playVoiceBlob(blob);
+      return;
+    }
+    ttsSpeak(text);
   }
 
   function shuffle(arr) {
@@ -1559,13 +1938,47 @@ voter, 选民"></textarea>
       alert(`提示："${card.text}" 的对应词是 "${card.pair}"`);
     };
 
-    $("btnRead").onclick = () => {
+    $("btnRead").onclick = async () => {
       if (!setting.autoRead) return;
-      cards.forEach((card, i) => {
-        if (card.type === "en" && !card.disappear) {
-          setTimeout(() => speak(card.text), i * 700);
-        }
-      });
+      initAudio();
+      const list = cards.filter(c => c.type === "en" && !c.disappear).map(c => c.text);
+      for (const w of list) {
+        if (!setting.autoRead) break;
+        await speak(w);
+        await new Promise(r => setTimeout(r, 500));
+      }
+    };
+
+    // 进"我的声音"录音面板
+    $("btnMyVoice").onclick = () => {
+      setRecState("");
+      renderVoiceList();
+      $("voiceModal").classList.add("show");
+    };
+    $("btnCloseVoice").onclick = () => {
+      stopRec();
+      $("voiceModal").classList.remove("show");
+    };
+    // 清空要连点两次才生效，避免手滑
+    let clearArmed = false, clearTimer = null;
+    $("btnVoiceClear").onclick = () => {
+      const btn = $("btnVoiceClear");
+      if (!clearArmed) {
+        clearArmed = true;
+        btn.innerText = "再点一次=清空";
+        clearTimer = setTimeout(() => {
+          clearArmed = false;
+          btn.innerText = "清空全部录音";
+        }, 3000);
+        return;
+      }
+      clearArmed = false;
+      if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
+      btn.innerText = "清空全部录音";
+      voiceClear().then(() => {
+        setRecState("已清空全部录音");
+        renderVoiceList();
+      }).catch(err => setRecState("清空失败：" + err.message));
     };
 
     // 「读词」按钮里的开关：开=朗读（含点英文卡自动朗读），关=全静音
