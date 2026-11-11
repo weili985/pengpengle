@@ -119,39 +119,93 @@
     transform: scale(0.96);
   }
 
-  /* 底部正中的「重开」按钮 */
+  /* 底部正中的「重开」按钮：淡红底、尺寸放大 50% */
   .restart-row {
     display: flex;
     justify-content: center;
-    margin: 10px 0 6px;
+    margin: 12px 0 8px;
   }
 
   .btn-restart {
-    min-width: 132px;
-    padding: 10px 24px;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 12px;
-    background: linear-gradient(180deg, #3b6452, #2f4b3c);
-    color: #fff;
-    font-size: 15px;
+    min-width: 198px;
+    padding: 15px 36px;
+    border: 1px solid rgba(255, 150, 150, 0.55);
+    border-radius: 18px;
+    background: linear-gradient(180deg, #ffeaea, #ffdcdc);
+    color: #8a2323;
+    font-size: 22px;
     font-weight: 800;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
     cursor: pointer;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 22px rgba(255, 120, 120, 0.32);
     transition: transform 0.12s ease, box-shadow 0.2s ease;
   }
 
   .btn-restart:active {
-    transform: scale(0.97);
+    transform: scale(0.92);
   }
 
-  /* 「读词」后面的开关 */
+  .btn-restart.press {
+    animation: restartPop 0.28s ease;
+  }
+
+  @keyframes restartPop {
+    0% { transform: scale(1); }
+    45% { transform: scale(0.9); }
+    100% { transform: scale(1); }
+  }
+
+  /* 「读词」按钮里的开关：整块就是一个按钮外观 */
+  .btn-split {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 9px 4px;
+    border: 1px solid var(--border-gold);
+    border-radius: 10px;
+    background: linear-gradient(180deg, var(--btn), var(--btn-2));
+    transition: transform 0.12s ease;
+  }
+
+  .btn-split-label {
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .btn-split:active {
+    transform: scale(0.96);
+  }
+
   .read-switch {
     flex: 0 0 auto;
     display: flex;
     align-items: center;
-    padding: 0 2px;
     cursor: pointer;
+  }
+
+  /* 按钮里的小号开关 */
+  .btn-split .switch-track {
+    width: 34px;
+    height: 18px;
+    border-radius: 9px;
+  }
+
+  .btn-split .switch-track::after {
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+  }
+
+  .btn-split .read-switch input:checked + .switch-track::after {
+    left: 18px;
   }
 
   .read-switch input {
@@ -489,11 +543,13 @@
   <button class="btn" id="btnWordbook">词库</button>
   <button class="btn" id="btnSetting">设置</button>
   <button class="btn" id="btnHint">提示</button>
-  <button class="btn" id="btnRead">读词</button>
-  <label class="read-switch" id="readSwitchWrap" title="自动朗读开关：点英文卡是否自动朗读">
-    <input type="checkbox" id="chkReadSwitch" checked>
-    <span class="switch-track"></span>
-  </label>
+  <div class="btn-split" id="readGroup">
+    <span class="btn-split-label" id="btnRead">读词</span>
+    <label class="read-switch" id="readSwitchWrap" title="读词开关：关掉后不再朗读">
+      <input type="checkbox" id="chkReadSwitch" checked>
+      <span class="switch-track"></span>
+    </label>
+  </div>
 </div>
 
 <div class="board" id="board"></div>
@@ -570,7 +626,7 @@ voter, 选民"></textarea>
       </div>
       <div class="checkbox-row">
         <input type="checkbox" id="chkAutoRead" checked />
-        <label>点击英文卡自动朗读</label>
+        <label>读词与自动朗读（与顶部读词开关同一个）</label>
       </div>
     </div>
 
@@ -1240,8 +1296,8 @@ voter, 选民"></textarea>
     }
   }
 
-  function speak(text, force) {
-    if (!force && !setting.autoRead) return;
+  function speak(text) {
+    if (!setting.autoRead) return;
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = setting.accent;
     utt.rate = setting.rate;
@@ -1486,7 +1542,13 @@ voter, 选民"></textarea>
     };
 
     $("btnRestart").onclick = () => {
+      const btn = $("btnRestart");
+      btn.classList.remove("press");
+      void btn.offsetWidth;
+      btn.classList.add("press");
+      setTimeout(() => btn.classList.remove("press"), 320);
       initAudio();
+      if (setting.clickSound) playClickSound(setting.clickStyle);
       startGame();
     };
 
@@ -1498,14 +1560,15 @@ voter, 选民"></textarea>
     };
 
     $("btnRead").onclick = () => {
+      if (!setting.autoRead) return;
       cards.forEach((card, i) => {
         if (card.type === "en" && !card.disappear) {
-          setTimeout(() => speak(card.text, true), i * 700);
+          setTimeout(() => speak(card.text), i * 700);
         }
       });
     };
 
-    // 「读词」后面的开关：控制点击英文卡是否自动朗读（与设置里的同名选项联动）
+    // 「读词」按钮里的开关：开=朗读（含点英文卡自动朗读），关=全静音
     $("chkReadSwitch").onchange = () => {
       setting.autoRead = $("chkReadSwitch").checked;
       $("chkAutoRead").checked = setting.autoRead;
