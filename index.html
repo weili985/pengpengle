@@ -716,10 +716,8 @@
 
   /* 被"激活"的英文卡：金圈 + 右上角小星 */
   .card.star-arm {
-    box-shadow:
-      0 0 0 2px #ffd35c inset,
-      0 10px 24px rgba(255, 211, 92, 0.3),
-      0 0 22px rgba(255, 211, 92, 0.28);
+    outline: 3px solid #ffd35c;
+    outline-offset: -3px;
   }
 
   .card.star-arm::before {
@@ -735,7 +733,7 @@
   .toast {
     position: fixed;
     left: 50%;
-    top: 14px;
+    bottom: 200px;
     transform: translateX(-50%);
     z-index: 400;
     padding: 8px 15px;
