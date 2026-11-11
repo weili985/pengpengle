@@ -916,19 +916,71 @@ voter, 选民"></textarea>
     { en: "rally", cn: "集会" },
     { en: "election", cn: "选举" },
     { en: "resign", cn: "辞职" },
-    { en: "voter", cn: "选民" }
+    { en: "voter", cn: "选民" },
+    { en: "campaign", cn: "竞选活动" },
+    { en: "poll", cn: "民意调查" },
+    { en: "candidate", cn: "候选人" },
+    { en: "coalition", cn: "联盟" },
+    { en: "parliament", cn: "议会" },
+    { en: "congress", cn: "国会" },
+    { en: "senate", cn: "参议院" },
+    { en: "legislation", cn: "立法" },
+    { en: "policy", cn: "政策" },
+    { en: "sanction", cn: "制裁" },
+    { en: "treaty", cn: "条约" },
+    { en: "summit", cn: "峰会" },
+    { en: "diplomacy", cn: "外交" },
+    { en: "ambassador", cn: "大使" },
+    { en: "tariff", cn: "关税" },
+    { en: "inflation", cn: "通货膨胀" },
+    { en: "recession", cn: "经济衰退" },
+    { en: "subsidy", cn: "补贴" },
+    { en: "budget", cn: "预算" },
+    { en: "scandal", cn: "丑闻" },
+    { en: "protest", cn: "抗议" },
+    { en: "referendum", cn: "公投" },
+    { en: "opponent", cn: "竞争对手" },
+    { en: "incumbent", cn: "现任者" },
+    { en: "majority", cn: "多数" },
+    { en: "concession", cn: "承认败选" },
+    { en: "agenda", cn: "议程" },
+    { en: "rhetoric", cn: "言辞" },
+    { en: "partisan", cn: "党派的" },
+    { en: "turnout", cn: "投票率" }
   ];
 
   const DEFAULT_WORDBOOK = wordbook.map(w => ({ ...w }));
   const WB_KEY = "pengpengle_wordbook";
+  const WB_DEFAULT_TAG = "pengpengle_wb_default_v";
+  const WB_DEFAULT_VER = "36-2026-11-11"; // 内置词库版本号：换了就说明加了新词
 
   // 词库持久化：导入或加载后刷新/重开都还在
+  // 内置词库加过词之后（WB_DEFAULT_VER 变了），把缺的内置词并进用户词库，用户自己导入的词保留
   (function restoreWordbook() {
     try {
       const saved = JSON.parse(localStorage.getItem(WB_KEY) || "null");
       if (Array.isArray(saved) && saved.length >= 4 &&
           saved.every(w => w && typeof w.en === "string" && typeof w.cn === "string" && w.en && w.cn)) {
         wordbook = saved.map(w => ({ en: w.en, cn: w.cn }));
+        let merged = false;
+        let tag = "";
+        try { tag = localStorage.getItem(WB_DEFAULT_TAG) || ""; } catch (e) {}
+        if (tag !== WB_DEFAULT_VER) {
+          const have = new Set(wordbook.map(w => w.en.toLowerCase()));
+          DEFAULT_WORDBOOK.forEach(w => {
+            if (!have.has(w.en.toLowerCase())) {
+              wordbook.push({ en: w.en, cn: w.cn });
+              merged = true;
+            }
+          });
+          if (merged) {
+            try { localStorage.setItem(WB_KEY, JSON.stringify(wordbook)); } catch (e) {}
+          }
+          try { localStorage.setItem(WB_DEFAULT_TAG, WB_DEFAULT_VER); } catch (e) {}
+        }
+      } else {
+        wordbook = DEFAULT_WORDBOOK.map(w => ({ ...w }));
+        try { localStorage.setItem(WB_DEFAULT_TAG, WB_DEFAULT_VER); } catch (e) {}
       }
     } catch (e) {}
   })();
@@ -2318,10 +2370,11 @@ voter, 选民"></textarea>
     $("btnResetWord").onclick = () => {
       wordbook = DEFAULT_WORDBOOK.map(w => ({ ...w }));
       try { localStorage.removeItem(WB_KEY); } catch (e) {}
+      try { localStorage.setItem(WB_DEFAULT_TAG, WB_DEFAULT_VER); } catch (e) {}
       $("wordInput").value = wordbook.map(w => `${w.en},${w.cn}`).join("\n");
       refreshPairChips();
       startGame();
-      alert("已恢复默认词库");
+      alert("已恢复默认词库（" + wordbook.length + " 条）");
     };
   }
 
