@@ -660,6 +660,149 @@
   .hidden {
     display: none !important;
   }
+
+  /* ===== 生词本（五角星） ===== */
+  .star-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin: -4px 0 6px;
+  }
+
+  .star-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 4px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+  }
+
+  .star-ico {
+    font-size: 23px;
+    line-height: 1;
+    color: #ffd35c;
+    text-shadow: 0 0 10px rgba(255, 211, 92, 0.55);
+    transition: transform 0.15s ease;
+  }
+
+  .star-btn:active .star-ico {
+    transform: scale(0.86);
+  }
+
+  .star-btn.pop .star-ico {
+    animation: starPop 0.4s ease;
+  }
+
+  @keyframes starPop {
+    0% { transform: scale(1) rotate(0deg); }
+    45% { transform: scale(1.38) rotate(14deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+
+  .star-txt {
+    font-size: 12px;
+    color: var(--gold-light);
+    letter-spacing: 0.5px;
+  }
+
+  .star-num {
+    font-size: 12px;
+    font-weight: 800;
+    color: #ffd35c;
+    min-width: 14px;
+    text-align: center;
+  }
+
+  /* 被"激活"的英文卡：金圈 + 右上角小星 */
+  .card.star-arm {
+    box-shadow:
+      0 0 0 2px #ffd35c inset,
+      0 10px 24px rgba(255, 211, 92, 0.3),
+      0 0 22px rgba(255, 211, 92, 0.28);
+  }
+
+  .card.star-arm::before {
+    content: "★";
+    position: absolute;
+    top: 3px;
+    right: 6px;
+    font-size: 11px;
+    line-height: 1;
+    color: #d99b00;
+  }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    top: 14px;
+    transform: translateX(-50%);
+    z-index: 400;
+    padding: 8px 15px;
+    border-radius: 999px;
+    background: rgba(20, 40, 28, 0.95);
+    border: 1px solid var(--border-gold);
+    color: var(--gold-light);
+    font-size: 13px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+
+  .toast.show { opacity: 1; }
+
+  .nb-tip {
+    font-size: 11px;
+    line-height: 1.6;
+    color: #a9c2b2;
+    margin-bottom: 8px;
+  }
+
+  .nb-list {
+    max-height: 44vh;
+    overflow-y: auto;
+    margin-bottom: 10px;
+    padding-right: 2px;
+  }
+
+  .nb-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 8px;
+    margin-bottom: 6px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .nb-word {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .nb-word b {
+    font-size: 14px;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nb-word span {
+    font-size: 11px;
+    color: #a9c2b2;
+  }
+
+  .nb-empty {
+    font-size: 13px;
+    color: #a9c2b2;
+    text-align: center;
+    padding: 20px 0;
+  }
 </style>
 </head>
 <body>
@@ -675,6 +818,14 @@
     <div class="info-pill" id="comboPill">连击 0</div>
     <div class="info-pill" id="progressPill">进度 0/12</div>
   </div>
+</div>
+
+<div class="star-bar">
+  <button type="button" class="star-btn" id="btnStar" title="生词本还是空的">
+    <span class="star-ico">★</span>
+    <span class="star-txt">生词本</span>
+    <span class="star-num" id="starNum">0</span>
+  </button>
 </div>
 
 <div class="info-row">
@@ -889,6 +1040,21 @@ voter, 选民"></textarea>
   </div>
 </div>
 
+<!-- 生词本 -->
+<div class="modal-mask" id="starModal">
+  <div class="modal">
+    <h3>生词本</h3>
+    <div class="nb-tip" id="nbTip"></div>
+    <div class="nb-list" id="nbList"></div>
+    <div class="modal-actions">
+      <button class="btn" id="btnNbPractice">用生词本练一局</button>
+      <button class="btn" id="btnNbExit" style="display:none">恢复全部词库</button>
+      <button class="btn" id="btnNbClear">清空</button>
+      <button class="btn" id="btnCloseNb">关闭</button>
+    </div>
+  </div>
+</div>
+
 <!-- 结算弹窗 -->
 <div class="modal-mask" id="resultModal">
   <div class="modal" style="text-align:center">
@@ -1005,7 +1171,8 @@ voter, 选民"></textarea>
 
   function capacityPairs() {
     // 一个词生成一对牌（英文卡 + 中文卡），所以可用对数就是词数
-    return wordbook.length;
+    // 生词本练习时用生词本里的词算容量
+    return (practiceWords ? practiceWords.length : wordbook.length);
   }
 
   function saveWordbook() {
@@ -1055,6 +1222,12 @@ voter, 选民"></textarea>
 
   let cards = [];
   let selected = [];
+  // 生词本相关：notebook 是被收藏的词；starPick 是当前被"激活"的英文卡下标；
+  // practiceWords 不为空时表示正在用生词本练（只换这一局用的词池，不动用户词库）
+  let notebook = [];
+  let starPick = null;
+  let practiceWords = null;
+  let pairsBeforePractice = null; // 练生词局前用户选的对数，退出时还原
   let matchedCount = 0;
   let totalPairs = 6;
   try {
@@ -1963,7 +2136,8 @@ voter, 选民"></textarea>
     startTime = Date.now();
     $("resultModal").classList.remove("show");
 
-    const list = shuffle(wordbook).slice(0, totalPairs);
+    const pool = practiceWords ? practiceWords : wordbook;
+    const list = shuffle(pool).slice(0, totalPairs);
     cards = [];
 
     list.forEach(item => {
@@ -1990,6 +2164,7 @@ voter, 选民"></textarea>
       div.dataset.index = idx;
       if (card.disappear) div.classList.add("disappear");
       if (selected.includes(idx)) div.classList.add("selected");
+      if (starPick === idx) div.classList.add("star-arm");
 
       div.innerHTML = `
         <div class="card-shine"></div>
@@ -2008,7 +2183,10 @@ voter, 选民"></textarea>
     if (selected.length >= 2) return;
 
     if (setting.clickSound) playClickSound(setting.clickStyle);
-    if (card.type === "en") speak(card.text);
+    if (card.type === "en") {
+      speak(card.text);
+      starPick = idx; // 这张英文卡"被激活"，点五角星就收进生词本
+    }
     selected.push(idx);
     renderBoard();
 
@@ -2027,6 +2205,7 @@ voter, 选民"></textarea>
         if (setting.matchSuccess) playSuccessSound(setting.successStyle);
         cardA.disappear = true;
         cardB.disappear = true;
+        starPick = null;
         selected = [];
         matchedCount++;
         combo++;
@@ -2120,6 +2299,166 @@ voter, 选民"></textarea>
       accent: $("selAccent").value,
       rate: Number($("rateSlider").value)
     }
+  }
+
+  // ===== 生词本 =====
+  const NB_KEY = "pengpengle_notebook";
+
+  (function restoreNotebook() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(NB_KEY) || "null");
+      if (Array.isArray(saved)) {
+        notebook = saved
+          .filter(w => w && typeof w.en === "string" && typeof w.cn === "string" && w.en && w.cn)
+          .map(w => ({ en: w.en, cn: w.cn }));
+      }
+    } catch (e) { notebook = []; }
+  })();
+
+  function saveNotebook() {
+    try { localStorage.setItem(NB_KEY, JSON.stringify(notebook)); } catch (e) {}
+    renderStarNum();
+  }
+
+  function renderStarNum() {
+    if ($("starNum")) $("starNum").innerText = String(notebook.length);
+    if ($("btnStar")) {
+      $("btnStar").title = notebook.length
+        ? ("生词本里有 " + notebook.length + " 个词，点这里打开")
+        : "生词本还是空的：先点一张英文卡，再点这颗星";
+    }
+  }
+
+  function toast(msg) {
+    let el = $("toastBox");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "toastBox";
+      el.className = "toast";
+      document.body.appendChild(el);
+    }
+    el.innerText = msg;
+    el.classList.add("show");
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove("show"), 1500);
+  }
+
+  function notebookHas(en) {
+    return notebook.some(w => w.en.toLowerCase() === String(en).toLowerCase());
+  }
+
+  function addToNotebook(en, cn) {
+    if (!en || !cn) return;
+    if (notebookHas(en)) { toast("生词本里已经有 " + en); return; }
+    notebook.push({ en: en, cn: cn });
+    saveNotebook();
+    renderNotebookList();
+    const b = $("btnStar");
+    if (b) { b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); }
+    toast("已收进生词本：" + en);
+  }
+
+  function removeFromNotebook(en) {
+    notebook = notebook.filter(w => w.en.toLowerCase() !== String(en).toLowerCase());
+    saveNotebook();
+    renderNotebookList();
+  }
+
+  function renderNotebookList() {
+    const box = $("nbList");
+    if (!box) return;
+    if (!notebook.length) {
+      box.innerHTML = '<div class="nb-empty">还没有生词。点一张英文卡（金色★圈起来），再点顶部那颗星，就收进来了。</div>';
+    } else {
+      box.innerHTML = notebook.map(w => `
+        <div class="nb-row" data-en="${w.en.replace(/"/g, "&quot;")}">
+          <div class="nb-word"><b>${w.en}</b><span>${w.cn}</span></div>
+          <div class="voice-btns">
+            <button class="btn-small nb-play">试听</button>
+            <button class="btn-small nb-del">删除</button>
+          </div>
+        </div>`).join("");
+    }
+    if ($("nbTip")) {
+      $("nbTip").innerText = "共 " + notebook.length + " 个词，只存在这台设备上。点英文卡（金色★圈起）再点顶部五角星可收录；"
+        + "「用生词本练一局」只打生词本里的词，练完点「恢复全部词库」回到原词库。";
+    }
+    if ($("btnNbPractice")) $("btnNbPractice").innerText = practiceWords ? "重开生词局" : "用生词本练一局";
+    if ($("btnNbExit")) $("btnNbExit").style.display = practiceWords ? "" : "none";
+  }
+
+  function openNotebook() {
+    renderNotebookList();
+    $("starModal").classList.add("show");
+  }
+
+  function practiceNotebook() {
+    if (notebook.length < 4) {
+      alert("生词本至少要有 4 个词才能开练（现在 " + notebook.length + " 个）");
+      return;
+    }
+    if (!practiceWords) pairsBeforePractice = totalPairs;
+    practiceWords = notebook.map(w => ({ en: w.en, cn: w.cn }));
+    if (totalPairs > practiceWords.length) totalPairs = Math.max(2, practiceWords.length);
+    $("starModal").classList.remove("show");
+    refreshPairChips();
+    startGame();
+  }
+
+  function exitPractice() {
+    practiceWords = null;
+    if (pairsBeforePractice) { totalPairs = pairsBeforePractice; pairsBeforePractice = null; }
+    $("starModal").classList.remove("show");
+    refreshPairChips();
+    startGame();
+  }
+
+  function bindStarEvents() {
+    if ($("btnStar")) {
+      $("btnStar").onclick = () => {
+        initAudio();
+        if (setting.clickSound) playClickSound(setting.clickStyle);
+        if (starPick !== null) {
+          const c = cards[starPick];
+          if (c && !c.disappear) {
+            addToNotebook(c.text, c.pair);
+            starPick = null;
+            renderBoard();
+            return;
+          }
+        }
+        openNotebook();
+      };
+    }
+    if ($("btnCloseNb")) $("btnCloseNb").onclick = () => $("starModal").classList.remove("show");
+    if ($("btnNbPractice")) $("btnNbPractice").onclick = () => { initAudio(); practiceNotebook(); };
+    if ($("btnNbExit")) $("btnNbExit").onclick = () => exitPractice();
+    if ($("btnNbClear")) {
+      $("btnNbClear").onclick = () => {
+        if (!notebook.length) return;
+        if (!confirm("清空生词本？（词库不受影响）")) return;
+        notebook = [];
+        // 清空时如果正在用生词本练，直接回到全部词库
+        if (practiceWords) {
+          practiceWords = null;
+          if (pairsBeforePractice) { totalPairs = pairsBeforePractice; pairsBeforePractice = null; }
+          refreshPairChips();
+          startGame();
+        }
+        saveNotebook();
+        renderNotebookList();
+      };
+    }
+    if ($("nbList")) {
+      $("nbList").onclick = (e) => {
+        const row = e.target.closest(".nb-row");
+        if (!row) return;
+        const en = row.dataset.en;
+        if (e.target.classList.contains("nb-play")) { initAudio(); speak(en); return; }
+        if (e.target.classList.contains("nb-del")) { removeFromNotebook(en); return; }
+      };
+    }
+    renderStarNum();
   }
 
   function bindEvents() {
@@ -2379,6 +2718,7 @@ voter, 选民"></textarea>
   }
 
   bindEvents();
+  bindStarEvents();
   loadSettingUI();
   refreshPairChips();
   startGame();
