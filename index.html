@@ -1567,6 +1567,9 @@ voter, 选民"></textarea>
   let recWord = "";
   let recStartAt = 0;
   let recTimer = null;
+  let recNative = false;
+  // 安卓壳里的原生录音桥（AudioRecord 直接录 WAV），有它就不走 WebView 的 getUserMedia
+  const MICN = (window.MicNative && typeof window.MicNative.start === "function") ? window.MicNative : null;
 
   function pickVoiceMime() {
     const cands = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus", "audio/aac"];
@@ -1586,9 +1589,75 @@ voter, 选民"></textarea>
 
   function stopRec() {
     if (recTimer) { clearTimeout(recTimer); recTimer = null; }
+    if (recNative) {
+      recNative = false;
+      let b64 = "";
+      try { b64 = String(MICN.stop() || ""); } catch (e) { b64 = ""; }
+      const dur = Math.round((Date.now() - recStartAt) / 10) / 100;
+      const word = recWord;
+      recWord = "";
+      if (!b64) {
+        setRecState("没录到声音，检查一下麦克风");
+        renderVoiceList();
+        return;
+      }
+      let blob = null;
+      try {
+        const bin = atob(b64);
+        const u8 = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+        blob = new Blob([u8], { type: "audio/wav" });
+      } catch (e) { blob = null; }
+      if (!blob || !blob.size) {
+        setRecState("录音数据异常，再录一次");
+        renderVoiceList();
+        return;
+      }
+      if (word) {
+        voicePut(word, blob, { mime: "audio/wav", dur }).then(() => {
+          setRecState(`已保存${recName(word)}的录音（${dur.toFixed(1)} 秒）`);
+          renderVoiceList();
+        }).catch(err => {
+          setRecState("保存失败：" + err.message);
+          renderVoiceList();
+        });
+      }
+      return;
+    }
     if (recMedia && recMedia.state !== "inactive") {
       try { recMedia.stop(); } catch (e) {}
     }
+  }
+
+  // 原生录音：直接用安卓壳的 AudioRecord，绕开 WebView 取流失败的问题
+  function nativeStartRec(en) {
+    let r = "";
+    try { r = String(MICN.start() || ""); } catch (e) { r = "ERR:" + (e && e.message); }
+    if (r !== "OK") {
+      let msg;
+      if (r === "PERM") {
+        msg = "应用还没拿到麦克风权限。\n请到手机「设置 → 应用 → 碰碰乐2 → 权限 → 麦克风」选「允许」，然后彻底关掉碰碰乐2 再打开。";
+      } else if (r === "INIT") {
+        let ps = 0;
+        try { ps = MICN.permissionState(); } catch (e) {}
+        msg = ps === 1
+          ? "权限已给，但系统没把麦克风设备交出来（多半被别的应用占着）。\n先把微信语音、录音机、其他录音软件关掉，再点一次「录音」。"
+          : "麦克风权限没给到位。\n去「设置 → 应用 → 碰碰乐2 → 权限 → 麦克风」打开后再试。";
+      } else if (r === "BUSY") {
+        msg = "上一次录音还没收完，稍等一下再点。";
+      } else {
+        msg = "录音启动失败（" + r + "）。\n先把占用麦克风的应用关掉，再点一次「录音」。";
+      }
+      setRecState("麦克风没打开，见提示");
+      alert(msg);
+      return;
+    }
+    recNative = true;
+    recWord = en;
+    recStartAt = Date.now();
+    setRecState(`正在录音：${recName(en)}（最多 6 秒，再点一次"停止"提前结束）`);
+    recTimer = setTimeout(stopRec, 6000);
+    renderVoiceList();
   }
 
   function releaseMic() {
@@ -1638,6 +1707,7 @@ voter, 选民"></textarea>
 
   function startRec(en) {
     if (recWord) { stopRec(); return; }
+    if (MICN) { nativeStartRec(en); return; }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       alert("这个环境不支持录音（需要用手机浏览器、Chrome 或安卓版碰碰乐）");
       return;
