@@ -331,6 +331,20 @@
   .vg-state.has {
     color: #7de2a8;
   }
+  .vg-use {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #cfe3d7;
+    cursor: pointer;
+  }
+  .vg-use input {
+    width: 18px;
+    height: 18px;
+    accent-color: #4fbf7a;
+  }
 
   .read-switch input {
     display: none;
@@ -860,7 +874,11 @@ voter, 选民"></textarea>
         <button class="btn-small" id="btnVoiceGlobalPlay">试听</button>
         <button class="btn-small" id="btnVoiceGlobalDel">删除</button>
       </div>
-      <div class="vg-tip">录一段给全部单词用：词库里每个英文词都播这一段；某个词另录过时优先播它自己的。</div>
+      <div class="vg-tip">录一段备用。默认不顶替没录过的词（那些词用系统朗读，点哪个读哪个）；勾上下面这行才会让所有没单独录的词都播这一段。</div>
+      <label class="vg-use" id="vgUseWrap">
+        <input type="checkbox" id="chkGlobalAll">
+        <span>没单独录的词也用这段（不勾=用系统朗读）</span>
+      </label>
     </div>
     <div class="voice-list" id="voiceList"></div>
     <div class="modal-actions">
@@ -1781,6 +1799,8 @@ voter, 选民"></textarea>
       gBtn.textContent = recWord === VGLOBAL ? "停止" : "录音";
       gBtn.className = "btn-small" + (recWord === VGLOBAL ? " recording" : "");
     }
+    const gChk = $("chkGlobalAll");
+    if (gChk) gChk.checked = globalAllOn();
     el.innerHTML = "";
     if (!wordbook.length) {
       el.innerHTML = '<div class="voice-tip">词库是空的</div>';
@@ -1797,8 +1817,9 @@ voter, 选民"></textarea>
       left.querySelector("b").textContent = w.en;
       left.querySelector("span").textContent = w.cn;
       const dur = document.createElement("div");
-      dur.className = "voice-dur" + ((has || hasGlobal) ? " has" : "");
-      dur.textContent = recording ? "录音中" : (has ? "已录" : (hasGlobal ? "用通用" : "未录"));
+      const useGlobal = hasGlobal && globalAllOn();
+      dur.className = "voice-dur" + ((has || useGlobal) ? " has" : "");
+      dur.textContent = recording ? "录音中" : (has ? "已录" : (useGlobal ? "用通用" : "未录"));
       const btns = document.createElement("div");
       btns.className = "voice-btns";
 
@@ -1837,11 +1858,17 @@ voter, 选民"></textarea>
     });
   }
 
-  // 某个词该播什么：自己的录音 > 通用录音 > null（交给系统朗读）
+  // 全局录音是否顶替「没单独录过的词」：默认关（关=没录过的词交给系统朗读，点哪个读哪个）
+  function globalAllOn() {
+    try { return localStorage.getItem("pengpengle_global_all") === "1"; } catch (e) { return false; }
+  }
+
+  // 某个词该播什么：自己的录音 > （开了"通用覆盖"才用）通用录音 > null（交给系统朗读）
   async function voiceFor(text) {
     const own = await voiceGet(text);
     if (own) return own;
-    return await voiceGet(VGLOBAL);
+    if (globalAllOn()) return await voiceGet(VGLOBAL);
+    return null;
   }
 
   async function speak(text) {
@@ -2142,6 +2169,15 @@ voter, 选民"></textarea>
 
     // 全部单词通用录音
     $("btnVoiceGlobalRec").onclick = () => startRec(VGLOBAL);
+    if ($("chkGlobalAll")) {
+      $("chkGlobalAll").onchange = () => {
+        try { localStorage.setItem("pengpengle_global_all", $("chkGlobalAll").checked ? "1" : "0"); } catch (e) {}
+        setRecState($("chkGlobalAll").checked
+          ? "已开启：没单独录的词也播这段通用录音"
+          : "已关闭：没单独录的词用系统朗读（点哪个词读哪个词）");
+        renderVoiceList();
+      };
+    }
     $("btnVoiceGlobalPlay").onclick = () => {
       voiceGet(VGLOBAL).then(blob => {
         if (blob) { playVoiceBlob(blob); return; }
