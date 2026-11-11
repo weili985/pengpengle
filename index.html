@@ -298,6 +298,40 @@
     border-color: #ff9a9a;
   }
 
+  /* 全部单词通用录音 */
+  .voice-global {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    background: rgba(216, 184, 104, 0.12);
+    border: 1px solid rgba(216, 184, 104, 0.45);
+  }
+  .vg-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gold-light);
+    margin-bottom: 4px;
+  }
+  .vg-tip {
+    font-size: 11px;
+    line-height: 1.6;
+    color: #a9c2b2;
+    margin-top: 4px;
+  }
+  .vg-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .vg-state {
+    flex: 1;
+    font-size: 12px;
+    color: #8fa89a;
+  }
+  .vg-state.has {
+    color: #7de2a8;
+  }
+
   .read-switch input {
     display: none;
   }
@@ -820,6 +854,16 @@ voter, 选民"></textarea>
     <div class="voice-tip">
       录过的词会用你的录音，没录的仍用系统朗读。录音只存在这台设备上，不会上传，换设备或清缓存会丢。
       每次最多录 6 秒，建议只读单词本身。
+    </div>
+    <div class="voice-global">
+      <div class="vg-title">全部单词通用录音</div>
+      <div class="vg-row">
+        <span class="vg-state" id="vgState">未录</span>
+        <button class="btn-small" id="btnVoiceGlobalRec">录音</button>
+        <button class="btn-small" id="btnVoiceGlobalPlay">试听</button>
+        <button class="btn-small" id="btnVoiceGlobalDel">删除</button>
+      </div>
+      <div class="vg-tip">录一段给全部单词用：词库里每个英文词都播这一段；某个词另录过时优先播它自己的。</div>
     </div>
     <div class="voice-list" id="voiceList"></div>
     <div class="modal-actions">
@@ -1417,6 +1461,7 @@ voter, 选民"></textarea>
   const VDB_NAME = "pengpengle_voice";
   const VSTORE = "voices";
   const voiceCache = new Map();   // 英文词 -> blob，内存缓存避免每次都读库
+  const VGLOBAL = "__all__";      // 「全部单词通用录音」在库里的键
 
   function vdbOpen() {
     return new Promise((resolve, reject) => {
@@ -1530,6 +1575,10 @@ voter, 选民"></textarea>
     return "";
   }
 
+  function recName(w) {
+    return w === VGLOBAL ? "全部单词通用录音" : "「" + w + "」";
+  }
+
   function setRecState(msg) {
     const el = $("voiceRecState");
     if (el) el.innerText = msg || "";
@@ -1586,7 +1635,7 @@ voter, 选民"></textarea>
         if (!blob.size) { setRecState("没录到声音，检查一下麦克风"); renderVoiceList(); return; }
         if (word) {
           voicePut(word, blob, { mime: blob.type, dur }).then(() => {
-            setRecState(`已保存「${word}」的录音（${dur.toFixed(1)} 秒）`);
+            setRecState(`已保存${recName(word)}的录音（${dur.toFixed(1)} 秒）`);
             renderVoiceList();
           }).catch(err => {
             setRecState("保存失败：" + err.message);
@@ -1597,7 +1646,7 @@ voter, 选民"></textarea>
       recStartAt = Date.now();
       try {
         recMedia.start();
-        setRecState(`正在录音：${en}（最多 6 秒，再点一次"停止"提前结束）`);
+        setRecState(`正在录音：${recName(en)}（最多 6 秒，再点一次"停止"提前结束）`);
       } catch (e) {
         releaseMic(); recWord = ""; recMedia = null;
         alert("录音启动失败：" + e.message);
@@ -1617,6 +1666,12 @@ voter, 选民"></textarea>
     if (!el) return;
     let keys = [];
     try { keys = await voiceKeys(); } catch (e) { keys = [...voiceCache.keys()]; }
+    const hasGlobal = keys.includes(VGLOBAL);
+    const gState = $("vgState");
+    if (gState) {
+      gState.textContent = recWord === VGLOBAL ? "录音中…" : (hasGlobal ? "已录（给全部单词用）" : "未录");
+      gState.className = "vg-state" + ((hasGlobal || recWord === VGLOBAL) ? " has" : "");
+    }
     el.innerHTML = "";
     if (!wordbook.length) {
       el.innerHTML = '<div class="voice-tip">词库是空的</div>';
@@ -1633,8 +1688,8 @@ voter, 选民"></textarea>
       left.querySelector("b").textContent = w.en;
       left.querySelector("span").textContent = w.cn;
       const dur = document.createElement("div");
-      dur.className = "voice-dur" + (has ? " has" : "");
-      dur.textContent = has ? "已录" : "未录";
+      dur.className = "voice-dur" + ((has || hasGlobal) ? " has" : "");
+      dur.textContent = recording ? "录音中" : (has ? "已录" : (hasGlobal ? "用通用" : "未录"));
       const btns = document.createElement("div");
       btns.className = "voice-btns";
 
@@ -1647,7 +1702,7 @@ voter, 选民"></textarea>
       bPlay.className = "btn-small";
       bPlay.textContent = "试听";
       bPlay.onclick = () => {
-        voiceGet(w.en).then(blob => {
+        voiceFor(w.en).then(blob => {
           if (blob) playVoiceBlob(blob);
           else ttsSpeak(w.en);
         });
@@ -1658,7 +1713,7 @@ voter, 选民"></textarea>
       bDel.textContent = "删除";
       bDel.onclick = () => {
         voiceDelete(w.en).then(() => {
-          setRecState(`已删除「${w.en}」的录音`);
+          setRecState(`已删除${recName(w.en)}的录音`);
           renderVoiceList();
         });
       };
@@ -1673,9 +1728,16 @@ voter, 选民"></textarea>
     });
   }
 
+  // 某个词该播什么：自己的录音 > 通用录音 > null（交给系统朗读）
+  async function voiceFor(text) {
+    const own = await voiceGet(text);
+    if (own) return own;
+    return await voiceGet(VGLOBAL);
+  }
+
   async function speak(text) {
     if (!setting.autoRead) return;
-    const blob = await voiceGet(text);
+    const blob = await voiceFor(text);
     if (blob) {
       await playVoiceBlob(blob);
       return;
@@ -1958,6 +2020,21 @@ voter, 选民"></textarea>
     $("btnCloseVoice").onclick = () => {
       stopRec();
       $("voiceModal").classList.remove("show");
+    };
+
+    // 全部单词通用录音
+    $("btnVoiceGlobalRec").onclick = () => startRec(VGLOBAL);
+    $("btnVoiceGlobalPlay").onclick = () => {
+      voiceGet(VGLOBAL).then(blob => {
+        if (blob) { playVoiceBlob(blob); return; }
+        setRecState("还没有通用录音，先点「录音」录一段");
+      });
+    };
+    $("btnVoiceGlobalDel").onclick = () => {
+      voiceDelete(VGLOBAL).then(() => {
+        setRecState("已删除通用录音");
+        renderVoiceList();
+      });
     };
     // 清空要连点两次才生效，避免手滑
     let clearArmed = false, clearTimer = null;
