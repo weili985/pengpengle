@@ -961,6 +961,58 @@
     text-shadow: 0 1px 0 #fff, 0 0 4px rgba(255, 255, 255, 0.9);
   }
 
+  /* 双击卡片不触发双击缩放，只弹"加到哪本生词本" */
+  .card {
+    touch-action: manipulation;
+  }
+
+  /* 双击选本弹窗里的可选本列表 */
+  .voice-hint {
+    margin: 2px 2px 8px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: #a9cfb8;
+  }
+
+  .nb-pick-list {
+    max-height: 46vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nb-pick {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 13px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(184, 156, 79, 0.45);
+    font-size: 15px;
+    color: #eaf5ee;
+  }
+
+  .nb-pick:active {
+    background: rgba(255, 255, 255, 0.16);
+  }
+
+  .nb-pick.has {
+    opacity: 0.62;
+    border-style: dashed;
+  }
+
+  .nb-pick-name {
+    font-weight: 600;
+  }
+
+  .nb-pick-num {
+    font-size: 12px;
+    color: #a9cfb8;
+    white-space: nowrap;
+  }
+
   /* 提示：把要配的那张卡闪三下，点哪个词就闪它的对应卡 */
   .card.hint-flash {
     outline: 3px solid #ffd166;
@@ -1176,6 +1228,7 @@ voter, 选民"></textarea>
           <option value="">自动（按口音）</option>
         </select>
       </div>
+      <div class="voice-hint" id="voiceHint"></div>
       <div class="setting-label-row">
         <span class="setting-label">朗读语速</span>
         <span class="gold-text" id="ratePercent">0.7</span>
@@ -1312,6 +1365,18 @@ voter, 选民"></textarea>
       <button class="btn" id="btnNbExit" style="display:none">恢复全部词库</button>
       <button class="btn" id="btnNbClear">清空</button>
       <button class="btn" id="btnCloseNb">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 双击卡片：选加到哪本生词本 -->
+<div class="modal-mask" id="nbPickModal">
+  <div class="modal">
+    <h3 id="nbPickTitle">加到哪本生词本</h3>
+    <div class="nb-pick-list" id="nbPickList"></div>
+    <div class="modal-actions">
+      <button class="btn" id="btnNbPickNew">新建一本收进去</button>
+      <button class="btn" id="btnNbPickClose">关闭</button>
     </div>
   </div>
 </div>
@@ -1910,6 +1975,8 @@ voter, 选民"></textarea>
   let nbGroups = [];   // 多个生词本：[{id,name,words:[{en,cn}]}]
   let nbCurrent = 0;   // 当前选中的那本
   let starPick = null;
+  let lastTap = { idx: -1, t: 0 };   // 双击判定：同一张卡 360ms 内点第二下
+  let pickCard = null;               // 双击选本时，正在安排的那张卡
   let practiceWords = null;
   let pairsBeforePractice = null; // 练生词局前用户选的对数，退出时还原
   let matchedCount = 0;
@@ -2403,9 +2470,23 @@ voter, 选民"></textarea>
       '<option value="' + esc(v.name) + '">' + esc(v.name) + (v.lang ? " · " + esc(v.lang) : "") + '</option>').join("");
     sel.value = vs.some(v => v.name === keep) ? keep : "";
     if ($("voiceRow")) $("voiceRow").style.display = vs.length ? "" : "none";
+    if ($("voiceHint")) {
+      $("voiceHint").innerText = vs.length
+        ? ("本机可用英文朗读人 " + vs.length + " 个，点名就用那一个；选「自动」则按上面的口音挑。")
+        : "本机没检测到英文朗读人：到手机「设置 → 系统 → 语言和输入法 → 文字转语音」里装一个英文语音包，否则英文会被中文腔读出来。";
+    }
   }
 
-  function ttsSpeak(text) {
+  function ttsSpeak(text, tried) {
+    // 壳里的朗读引擎刚起来时可能还没就绪，这时说一句是静音：等 0.7 秒再补一次，只补一次
+    if (window.AndroidTTS && AndroidTTS.isReady && !AndroidTTS.isReady()) {
+      if (!tried) {
+        setTimeout(() => { try { ttsSpeak(text, true); } catch (e) {} }, 700);
+      } else {
+        toast("朗读引擎还没就绪：等几秒再点，或到系统设置里换一个 TTS 引擎");
+      }
+      return;
+    }
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = setting.accent;
     utt.rate = setting.rate;
@@ -2415,7 +2496,15 @@ voter, 选民"></textarea>
       utt.voice = v;
       if (v.lang) utt.lang = v.lang;
     }
-    speechSynthesis.speak(utt);
+    try {
+      speechSynthesis.speak(utt);
+    } catch (e) {
+      // 指定朗读人出错时退回"只按口音"，宁可听上去一般也不要没声音
+      const plain = new SpeechSynthesisUtterance(text);
+      plain.lang = setting.accent;
+      plain.rate = setting.rate;
+      try { speechSynthesis.speak(plain); } catch (e2) {}
+    }
   }
 
   // 朗读人列表是异步来的：能监听就监听
@@ -2504,25 +2593,32 @@ voter, 选民"></textarea>
   }
 
   // 播放一段录音，返回"播完"的 Promise（超时兜底，避免卡住读词流程）
+  // 放自己录的音；返回 true=真的放出来了，false=没放成（调用方要退回系统朗读）
   function playVoiceBlob(blob, maxMs) {
     return new Promise(resolve => {
-      let done = false, url = "";
-      const finish = () => {
+      let done = false, url = "", audible = false;
+      const finish = (good) => {
         if (done) return;
         done = true;
+        if (good === true) audible = true;
         if (url) setTimeout(() => { try { URL.revokeObjectURL(url); } catch (e) {} }, 500);
-        resolve();
+        resolve(audible);
       };
       try {
         url = URL.createObjectURL(blob);
         const a = new Audio(url);
-        a.onended = finish;
-        a.onerror = finish;
+        a.onplaying = () => { audible = true; };
+        a.onended = () => finish(true);
+        a.onerror = () => finish(false);
         const p = a.play();
-        if (p && p.catch) p.catch(finish);
-        setTimeout(() => { try { a.pause(); } catch (e) {} finish(); }, maxMs || 9000);
+        if (p && p.then) p.then(() => { audible = true; }).catch(() => finish(false));
+        else if (p && p.catch) p.catch(() => finish(false));
+        setTimeout(() => {
+          try { a.pause(); } catch (e) {}
+          finish(audible);
+        }, maxMs || 9000);
       } catch (e) {
-        finish();
+        finish(false);
       }
     });
   }
@@ -2828,10 +2924,15 @@ voter, 选民"></textarea>
 
   async function speak(text) {
     if (!setting.autoRead) return;
-    const blob = await voiceFor(text);
-    if (blob) {
-      await playVoiceBlob(blob);
-      return;
+    try {
+      const blob = await voiceFor(text);
+      if (blob) {
+        const played = await playVoiceBlob(blob);
+        if (played) return;    // 自己的录音真的放出来了
+        // 放不出来（被别的播放器占着 / 文件坏了 / 浏览器不给播）→ 退回系统朗读，绝不静音
+      }
+    } catch (e) {
+      // IndexedDB 读失败也照样退回系统朗读
     }
     ttsSpeak(text);
   }
@@ -2930,6 +3031,15 @@ voter, 选民"></textarea>
     const card = cards[idx];
     if (card.disappear) return;
     if (card._longPress) { card._longPress = false; return; } // 刚才是长按，别当成点选
+
+    // 双击同一张卡：弹"加到哪本生词本"（单击仍然只是选中 + 读词）
+    const nowMs = Date.now();
+    if (lastTap.idx === idx && nowMs - lastTap.t < 360) {
+      lastTap.idx = -1;
+      openNbPick(card);
+      return;
+    }
+    lastTap = { idx: idx, t: nowMs };
     if (selected.length >= 2) return;
 
     if (setting.clickSound) playClickSound(setting.clickStyle);
@@ -3253,6 +3363,82 @@ voter, 选民"></textarea>
     toast("已收进「" + nbCur().name + "」：" + en);
   }
 
+  // ---------- 双击卡片：选一本生词本收进去 ----------
+  function openNbPick(card) {
+    if (!card) return;
+    pickCard = card;
+    const en = card.type === "en" ? card.text : card.pair;
+    const cn = card.type === "en" ? card.pair : card.text;
+    const title = $("nbPickTitle");
+    if (title) title.innerText = "「" + en + "」加到哪本？";
+    // 列表整块重建，事件只挂一次（点某本 / 新建 / 关闭 / 点空白关闭）
+    const list = $("nbPickList");
+    if (list && !list._bound) {
+      list._bound = 1;
+      list.onclick = (ev) => {
+        const row = ev.target.closest ? ev.target.closest(".nb-pick") : null;
+        if (row) pickIntoGroup(Number(row.dataset.idx));
+      };
+      const bNew = $("btnNbPickNew");
+      if (bNew) bNew.onclick = pickIntoNewGroup;
+      const bClose = $("btnNbPickClose");
+      if (bClose) bClose.onclick = closeNbPick;
+      const mask = $("nbPickModal");
+      if (mask) mask.onclick = (ev) => { if (ev.target === mask) closeNbPick(); };
+    }
+    const box = $("nbPickList");
+    if (box) {
+      box.innerHTML = nbGroups.map((g, i) => {
+        const has = g.words.some(w => w.en.toLowerCase() === String(en).toLowerCase());
+        return '<div class="nb-pick' + (has ? " has" : "") + '" data-idx="' + i + '">'
+          + '<span class="nb-pick-name">' + g.name + '</span>'
+          + '<span class="nb-pick-num">' + g.words.length + ' 词' + (has ? " · 已收" : "") + '</span></div>';
+      }).join("");
+    }
+    const m = $("nbPickModal");
+    if (m) m.classList.add("show");
+  }
+
+  function closeNbPick() {
+    const m = $("nbPickModal");
+    if (m) m.classList.remove("show");
+    pickCard = null;
+  }
+
+  function pickIntoGroup(gi) {
+    if (!pickCard) return;
+    const g = nbGroups[gi];
+    if (!g) return;
+    const en = pickCard.type === "en" ? pickCard.text : pickCard.pair;
+    const cn = pickCard.type === "en" ? pickCard.pair : pickCard.text;
+    if (g.words.some(w => w.en.toLowerCase() === String(en).toLowerCase())) {
+      toast("「" + g.name + "」里已经有 " + en);
+      return;
+    }
+    g.words.push({ en: en, cn: cn });
+    nbCurrent = gi;
+    saveNotebook();
+    renderNotebookList();
+    renderBoard();
+    toast("已收进「" + g.name + "」：" + en);
+    closeNbPick();
+  }
+
+  function pickIntoNewGroup() {
+    if (!pickCard) return;
+    const en = pickCard.type === "en" ? pickCard.text : pickCard.pair;
+    const cn = pickCard.type === "en" ? pickCard.pair : pickCard.text;
+    let k = nbGroups.length + 1;
+    while (nbGroups.some(g => g.name === "生词本" + k)) k++;
+    nbGroups.push({ id: nbNewId(), name: ("生词本" + k).slice(0, 12), words: [{ en: en, cn: cn }] });
+    nbCurrent = nbGroups.length - 1;
+    saveNotebook();
+    renderNotebookList();
+    renderBoard();
+    toast("已新建「" + nbCur().name + "」并收进：" + en);
+    closeNbPick();
+  }
+
   function removeFromNotebook(en) {
     const g = nbCur();
     g.words = g.words.filter(w => w.en.toLowerCase() !== String(en).toLowerCase());
@@ -3284,7 +3470,7 @@ voter, 选民"></textarea>
     }
     if ($("nbTip")) {
       $("nbTip").innerText = "当前「" + g.name + "」" + g.words.length + " 个词；共 " + nbGroups.length + " 本、合计 " + nbTotal() + " 个词，只存在这台设备上。"
-        + "点英文卡（金色★圈起）再点五角星，收进当前这本。";
+        + "点英文卡再点五角星 = 收进当前这本；双击任意一张卡片 = 弹出来让你挑收进哪一本。";
     }
     if ($("btnNbPractice")) {
       $("btnNbPractice").innerText = practiceWords ? "重开这本" : "用这本练一局";
