@@ -1383,6 +1383,19 @@ voter, 选民"></textarea>
   </div>
 </div>
 
+<!-- 双击已收录的词：给个选择（移出这个词 / 删掉整本） -->
+<div class="modal-mask" id="askModal">
+  <div class="modal">
+    <h3 id="askTitle">提示</h3>
+    <p id="askDesc" style="margin:8px 0 14px;font-size:14px;line-height:1.6;white-space:pre-line"></p>
+    <div class="modal-actions">
+      <button class="btn" id="btnAskOk">确定</button>
+      <button class="btn" id="btnAskAlt" style="display:none">备选</button>
+      <button class="btn" id="btnAskCancel">算了</button>
+    </div>
+  </div>
+</div>
+
 <!-- 长按看音标 -->
 <div class="ipa-mask" id="ipaMask">
   <div class="ipa-card">
@@ -2500,7 +2513,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.8.5");
+    bits.push("版本 v1.8.6");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -3467,6 +3480,29 @@ voter, 选民"></textarea>
     toast("已收进「" + nbCur().name + "」：" + en);
   }
 
+  let askOkCb = null, askAltCb = null;
+
+  function askBox(opts) {
+    $("askTitle").innerText = opts.title || "提示";
+    $("askDesc").innerText = opts.desc || "";
+    $("btnAskOk").innerText = opts.ok || "确定";
+    const alt = $("btnAskAlt");
+    if (alt) {
+      alt.innerText = opts.alt || "";
+      alt.style.display = opts.onAlt ? "" : "none";
+    }
+    $("btnAskCancel").innerText = opts.cancel || "算了";
+    askOkCb = opts.onOk || null;
+    askAltCb = opts.onAlt || null;
+    $("askModal").classList.add("show");
+  }
+
+  function closeAsk() {
+    $("askModal").classList.remove("show");
+    askOkCb = null;
+    askAltCb = null;
+  }
+
   function cardWord(card) {
     return card.type === "en" ? { en: card.text, cn: card.pair } : { en: card.pair, cn: card.text };
   }
@@ -3476,7 +3512,41 @@ voter, 选民"></textarea>
     const w = cardWord(card);
     const owner = nbFindGroup(w.en);
     if (owner) {
-      toast("「" + w.en + "」已经在生词本「" + owner.name + "」里了");
+      const gi = nbGroups.indexOf(owner);
+      const cnt = owner.words.length;
+      askBox({
+        title: "这个已经在生词本里了",
+        desc: "「" + w.en + "」已经在生词本「" + owner.name + "」里（这本共 " + cnt + " 个词）。\n"
+            + "要把它从这本移出去，还是干脆把这本关掉？",
+        ok: "从这本移出这个词",
+        alt: cnt > 1 ? "删掉整本（" + cnt + " 个词一起删）" : "删掉整本",
+        cancel: "算了",
+        onOk: () => {
+          nbCurrent = gi;
+          saveNotebook();
+          renderNotebookList();
+          removeFromNotebook(w.en);
+          toast("已从「" + owner.name + "」移出：" + w.en);
+        },
+        onAlt: () => {
+          // 删整本：先把当前本切过去，再照面板里的"删本"一样删
+          nbCurrent = gi;
+          const name = owner.name;
+          nbGroups.splice(gi, 1);
+          if (!nbGroups.length) nbGroups.push({ id: nbNewId(), name: "生词本", words: [] });
+          nbCurrent = Math.min(nbCurrent, nbGroups.length - 1);
+          if (practiceWords) {   // 正在用这本练，删了就直接回全部词库
+            practiceWords = null;
+            if (pairsBeforePractice) { totalPairs = pairsBeforePractice; pairsBeforePractice = null; }
+            refreshPairChips();
+            startGame();
+          }
+          saveNotebook();
+          renderNotebookList();
+          renderBoard();
+          toast("已关掉生词本「" + name + "」");
+        }
+      });
       return;
     }
     openNbPick(card);
@@ -3717,6 +3787,22 @@ voter, 选民"></textarea>
         if (e.target.classList.contains("mr-back")) { unmaster(en); return; }
       };
     }
+    if ($("btnAskOk")) {
+      $("btnAskOk").onclick = () => {
+        const f = askOkCb;
+        closeAsk();
+        if (f) f();
+      };
+    }
+    if ($("btnAskAlt")) {
+      $("btnAskAlt").onclick = () => {
+        const f = askAltCb;
+        closeAsk();
+        if (f) f();
+      };
+    }
+    if ($("btnAskCancel")) $("btnAskCancel").onclick = closeAsk;
+    if ($("askModal")) $("askModal").onclick = (ev) => { if (ev.target === $("askModal")) closeAsk(); };
     if ($("btnCloseNb")) $("btnCloseNb").onclick = () => $("starModal").classList.remove("show");
     if ($("btnNbPractice")) $("btnNbPractice").onclick = () => { initAudio(); practiceNotebook(); };
     if ($("btnNbExit")) $("btnNbExit").onclick = () => exitPractice();
