@@ -2480,10 +2480,27 @@ voter, 选民"></textarea>
     }
   }
 
+  // 开机体检：壳里朗读引擎没就绪 / 没有英文语音包，进页面就提示一句
+  function startupAudioCheck() {
+    setTimeout(() => {
+      try {
+        renderTtsDiag();
+        if (!window.AndroidTTS) return;
+        let ready = false;
+        try { ready = !!AndroidTTS.isReady(); } catch (e) {}
+        if (!ready) {
+          toast("朗读引擎还没就绪：先点一次卡片，或稍等几秒；一直没声音就去设置里看「声音自检」");
+        } else if (availableVoices().length === 0) {
+          toast("本机没有英文语音包：英文会用中文腔读，去手机「文字转语音」里装一个英文语音");
+        }
+      } catch (e) {}
+    }, 2200);
+  }
+
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.8.3");
+    bits.push("版本 v1.8.4");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -2495,6 +2512,7 @@ voter, 选民"></textarea>
       bits.push("浏览器英文朗读人：" + availableVoices().length + " 个");
     }
     if (setting.voiceName) bits.push("指定朗读人：" + setting.voiceName);
+    bits.push("最近一次：" + (lastVoiceRoute || "还没读过"));
     return bits.join("　|　");
   }
 
@@ -2512,6 +2530,8 @@ voter, 选民"></textarea>
       }
       return;
     }
+    lastVoiceRoute = "系统朗读（" + setting.accent + (setting.voiceName ? " / " + setting.voiceName : "") + "）";
+    renderTtsDiag();
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = setting.accent;
     utt.rate = setting.rate;
@@ -2947,17 +2967,60 @@ voter, 选民"></textarea>
     return null;
   }
 
+  // 判断一段录音到底有没有声音：播"成功"不等于有声音，空录 / 音量极低的录会静音
+  async function blobAudible(blob) {
+    try {
+      if (!blob || blob.size < 700) return false;      // 空录：WAV 头都不完整
+      const buf = await new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => res(fr.result);
+        fr.onerror = rej;
+        fr.readAsArrayBuffer(blob);
+      });
+      const ac = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      const ab = await new Promise((res, rej) => {
+        const p = ac.decodeAudioData(buf, res, rej);
+        if (p && p.then) p.then(res).catch(rej);
+      });
+      const ch = ab.getChannelData(0);
+      let peak = 0;
+      const step = Math.max(1, Math.floor(ch.length / 30000));
+      for (let i = 0; i < ch.length; i += step) {
+        const v = ch[i] < 0 ? -ch[i] : ch[i];
+        if (v > peak) peak = v;
+      }
+      return peak > 0.02;                              // 峰值低于 2% 当没声音
+    } catch (e) {
+      return true;                                     // 解不开就放行，别误伤正常录音
+    }
+  }
+
+  let lastVoiceRoute = "";
+
   async function speak(text) {
-    if (!setting.autoRead) return;
+    if (!setting.autoRead) {
+      lastVoiceRoute = "读词开关关着，没读";
+      renderTtsDiag();
+      return;
+    }
     try {
       const blob = await voiceFor(text);
       if (blob) {
-        const played = await playVoiceBlob(blob);
-        if (played) return;    // 自己的录音真的放出来了
+        if (!(await blobAudible(blob))) {
+          lastVoiceRoute = "录音是空的，改用系统朗读";
+        } else {
+          const played = await playVoiceBlob(blob);
+          if (played) {
+            lastVoiceRoute = "我的录音";
+            renderTtsDiag();
+            return;                                  // 自己的录音真的放出来了
+          }
+          lastVoiceRoute = "录音没放出来，改用系统朗读";
+        }
         // 放不出来（被别的播放器占着 / 文件坏了 / 浏览器不给播）→ 退回系统朗读，绝不静音
       }
     } catch (e) {
-      // IndexedDB 读失败也照样退回系统朗读
+      lastVoiceRoute = "录音库读不了，改用系统朗读";
     }
     ttsSpeak(text);
   }
@@ -3047,7 +3110,7 @@ voter, 选民"></textarea>
         if (card._longPress) return;                 // 长按看音标，不算双击
         // 双击判定放在这里：WebView 里第二下可能变成缩放gesture，click 事件不保证来
         const t2 = Date.now();
-        if (lastTapUp.idx === idx && t2 - lastTapUp.t < 340) {
+        if (lastTapUp.idx === idx && t2 - lastTapUp.t < 520) {
           lastTapUp.idx = -1;
           openNbPick(card);
           return;
@@ -3070,7 +3133,7 @@ voter, 选民"></textarea>
 
     // 双击同一张卡：弹"加到哪本生词本"（单击仍然只是选中 + 读词）
     const nowMs = Date.now();
-    if (lastTap.idx === idx && nowMs - lastTap.t < 360) {
+    if (lastTap.idx === idx && nowMs - lastTap.t < 520) {
       lastTap.idx = -1;
       openNbPick(card);
       return;
@@ -3959,6 +4022,7 @@ voter, 选民"></textarea>
   loadSettingUI();
   refreshPairChips();
   startGame();
+  startupAudioCheck();
   window.addEventListener("resize", syncBoardSpace);
   window.addEventListener("orientationchange", () => setTimeout(syncBoardSpace, 200));
 </script>
