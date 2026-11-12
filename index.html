@@ -3112,7 +3112,7 @@ voter, 选民"></textarea>
         const t2 = Date.now();
         if (lastTapUp.idx === idx && t2 - lastTapUp.t < 520) {
           lastTapUp.idx = -1;
-          openNbPick(card);
+          dblPickNotebook(card);
           return;
         }
         lastTapUp = { idx: idx, t: t2 };
@@ -3135,7 +3135,7 @@ voter, 选民"></textarea>
     const nowMs = Date.now();
     if (lastTap.idx === idx && nowMs - lastTap.t < 520) {
       lastTap.idx = -1;
-      openNbPick(card);
+      dblPickNotebook(card);
       return;
     }
     lastTap = { idx: idx, t: nowMs };
@@ -3467,6 +3467,21 @@ voter, 选民"></textarea>
     toast("已收进「" + nbCur().name + "」：" + en);
   }
 
+  function cardWord(card) {
+    return card.type === "en" ? { en: card.text, cn: card.pair } : { en: card.pair, cn: card.text };
+  }
+
+  // 双击一张卡：已经收进生词本的就只提示一句，不再弹选本面板
+  function dblPickNotebook(card) {
+    const w = cardWord(card);
+    const owner = nbFindGroup(w.en);
+    if (owner) {
+      toast("「" + w.en + "」已经在生词本「" + owner.name + "」里了");
+      return;
+    }
+    openNbPick(card);
+  }
+
   // ---------- 双击卡片：选一本生词本收进去 ----------
   function openNbPick(card) {
     if (!card) return;
@@ -3574,7 +3589,8 @@ voter, 选民"></textarea>
     }
     if ($("nbTip")) {
       $("nbTip").innerText = "当前「" + g.name + "」" + g.words.length + " 个词；共 " + nbGroups.length + " 本、合计 " + nbTotal() + " 个词，只存在这台设备上。"
-        + "点英文卡再点五角星 = 收进当前这本；双击任意一张卡片 = 弹出来让你挑收进哪一本。";
+        + "点上面任意一本书名 = 直接用那本开练（至少 2 个词）；点英文卡再点五角星 = 收进当前这本；"
+        + "双击没收录过的卡片 = 弹出来让你挑收进哪一本，已经在生词本里的双击只提示在哪本。";
     }
     if ($("btnNbPractice")) {
       $("btnNbPractice").innerText = practiceWords ? "重开这本" : "用这本练一局";
@@ -3592,8 +3608,8 @@ voter, 选民"></textarea>
 
   function practiceNotebook() {
     const g = nbCur();
-    if (g.words.length < 4) {
-      toast("「" + g.name + "」至少要有 4 个词才能开练（现在 " + g.words.length + " 个）");
+    if (g.words.length < 2) {
+      toast("「" + g.name + "」至少要有 2 个词才能开练（现在 " + g.words.length + " 个）");
       return;
     }
     if (!practiceWords) pairsBeforePractice = totalPairs;
@@ -3643,9 +3659,17 @@ voter, 选民"></textarea>
       $("nbTabs").onclick = (e) => {
         const t = e.target.closest(".nb-tab");
         if (!t) return;
-        nbCurrent = Number(t.dataset.idx) || 0;
+        const gi = Number(t.dataset.idx) || 0;
+        if (gi === nbCurrent && practiceWords) {
+          // 正在用这本练，再点一下就是重开一局
+          practiceNotebook();
+          return;
+        }
+        nbCurrent = gi;
         saveNotebook();
         renderNotebookList();
+        initAudio();
+        practiceNotebook();          // 点哪本就用哪本开练
       };
     }
     if ($("btnNbNew")) {
