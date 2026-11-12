@@ -961,6 +961,25 @@
     text-shadow: 0 1px 0 #fff, 0 0 4px rgba(255, 255, 255, 0.9);
   }
 
+  /* 提示：把要配的那张卡闪三下，点哪个词就闪它的对应卡 */
+  .card.hint-flash {
+    outline: 3px solid #ffd166;
+    outline-offset: 2px;
+    z-index: 3;
+    animation: hintPulse 0.5s ease-in-out 3;
+  }
+
+  @keyframes hintPulse {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+    }
+    50% {
+      transform: scale(1.07);
+      box-shadow: 0 0 24px rgba(255, 209, 102, 0.9);
+    }
+  }
+
   /* ===== 窄屏兜底：底部三键不许溢出屏幕、标题不许折行、四个胶囊排成整齐一行 ===== */
   .bottom-panel .restart-row {
     width: 100%;
@@ -3478,11 +3497,35 @@ voter, 选民"></textarea>
       startGame();
     };
 
-    $("btnHint").onclick = () => {
-      const firstValid = cards.findIndex(c => !c.disappear);
-      if (firstValid === -1) return;
-      const card = cards[firstValid];
-      alert(`提示："${card.text}" 的对应词是 "${card.pair}"`);
+    // 提示：点过哪张英文卡，就提示哪张卡要配的是谁（点中文卡会把它对应的英文卡当成目标）
+    $("btnHint").onclick = (e) => {
+      if (e) { e.preventDefault(); e.stopPropagation(); }
+      let pick = null;
+      // 以"刚点的那张卡"为准（点英文卡提示中文，点中文卡提示英文）；没点过再看被激活的英文卡
+      if (selected.length === 1 && cards[selected[0]] && !cards[selected[0]].disappear) {
+        pick = cards[selected[0]];
+      } else if (starPick !== null && cards[starPick] && !cards[starPick].disappear) {
+        pick = cards[starPick];
+      }
+      if (!pick) {
+        toast("先点一张英文卡，再点提示");
+        return;
+      }
+      const en = pick.type === "en" ? pick.text : pick.pair;
+      const cn = pick.type === "en" ? pick.pair : pick.text;
+      // 找出该配的那张卡，闪它三下
+      const targetText = pick.type === "en" ? cn : en;   // 要闪的那张卡上的文字（另一种语言）
+      const targetType = pick.type === "en" ? "cn" : "en";
+      const target = cards.findIndex(c => !c.disappear && c.type === targetType && c.text === targetText);
+      if (target !== -1) {
+        renderBoard();
+        const node = document.querySelector('.card[data-index="' + target + '"]');
+        if (node) {
+          node.classList.add("hint-flash");
+          setTimeout(() => node.classList.remove("hint-flash"), 1600);
+        }
+      }
+      toast(`"${en}" 要配的是 "${cn}"`);
     };
 
     $("btnRead").onclick = async () => {
