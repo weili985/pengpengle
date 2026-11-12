@@ -801,6 +801,68 @@
     text-align: center;
     padding: 20px 0;
   }
+
+  /* ===== 窄屏兜底：底部三键不许溢出屏幕、标题不许折行、四个胶囊排成整齐一行 ===== */
+  .bottom-panel .restart-row {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  @media (max-width: 460px) {
+    /* 顶部：标题独占一行不再折成「好难/学」，四个胶囊平均分一行，不再随机换行 */
+    .topbar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .title-box {
+      justify-content: flex-start;
+    }
+
+    .title {
+      white-space: nowrap;
+    }
+
+    .info-row-top {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+      width: 100%;
+    }
+
+    .info-pill {
+      text-align: center;
+      padding: 6px 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* 底部：词库 / 重开 / 齿轮 按容器宽度分配，两侧收窄，「重开」吃掉剩下的宽度 */
+    .restart-row {
+      gap: 8px;
+      padding: 0;
+      align-items: stretch;
+    }
+
+    .btn-side {
+      width: 64px;
+    }
+
+    .btn-side.btn-icon {
+      width: 64px;
+    }
+
+    .restart-row .btn-restart {
+      flex: 1 1 auto;
+      min-width: 0;
+      height: 60px;
+      padding: 0 8px;
+      font-size: 20px;
+      letter-spacing: 1px;
+    }
+  }
 </style>
 </head>
 <body>
