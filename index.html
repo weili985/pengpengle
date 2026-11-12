@@ -802,6 +802,100 @@
     padding: 20px 0;
   }
 
+  /* ===== 熟字按钮 / 音标弹层 / 熟词库小标题 ===== */
+  .star-bar {
+    justify-content: space-between;
+  }
+
+  .btn-mastered {
+    min-width: 62px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border-gold);
+    background: var(--btn);
+    color: #fff;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.12s ease;
+  }
+
+  .btn-mastered:active {
+    transform: scale(0.95);
+    background: var(--btn-active);
+  }
+
+  .nb-sub {
+    margin: 14px 0 6px;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--gold-light);
+    letter-spacing: 1px;
+  }
+
+  .nb-sub-num {
+    color: #ffd35c;
+    margin-left: 4px;
+  }
+
+  .ipa-mask {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 70;
+  }
+
+  .ipa-mask.show {
+    display: flex;
+  }
+
+  .ipa-card {
+    min-width: 220px;
+    max-width: 86vw;
+    padding: 18px 22px 14px;
+    border-radius: 16px;
+    background: var(--panel-bg);
+    border: 1px solid var(--border-gold);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+    text-align: center;
+  }
+
+  .ipa-word {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--card-en-text);
+    word-break: break-all;
+  }
+
+  .ipa-ph {
+    margin-top: 8px;
+    font-size: 18px;
+    color: var(--gold-light);
+    letter-spacing: 0.5px;
+    word-break: break-all;
+  }
+
+  .ipa-cn {
+    margin-top: 6px;
+    font-size: 14px;
+    color: #cfe9d9;
+  }
+
+  .ipa-tip {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #8fb9a2;
+  }
+
   /* ===== 窄屏兜底：底部三键不许溢出屏幕、标题不许折行、四个胶囊排成整齐一行 ===== */
   .bottom-panel .restart-row {
     width: 100%;
@@ -881,6 +975,7 @@
 </div>
 
 <div class="star-bar">
+  <button type="button" class="btn-mastered" id="btnMastered" title="先点一张英文卡，再点这里">熟</button>
   <button type="button" class="star-btn" id="btnStar" title="生词本还是空的">
     <span class="star-ico">★</span>
     <span class="star-txt">生词本</span>
@@ -906,12 +1001,12 @@
 <div class="board" id="board"></div>
 
 <div class="bottom-panel">
-  <div class="section-title">每关对数</div>
   <div class="pair-options" id="pairOptions">
     <div class="chip" data-pair="4">4 对</div>
     <div class="chip active" data-pair="6">6 对</div>
     <div class="chip" data-pair="8">8 对</div>
     <div class="chip" data-pair="10">10 对</div>
+    <div class="chip" data-pair="12">12 对</div>
   </div>
   <div class="restart-row">
     <button class="btn-restart" id="btnRestart">重开</button>
@@ -1106,12 +1201,24 @@ voter, 选民"></textarea>
     <h3>生词本</h3>
     <div class="nb-tip" id="nbTip"></div>
     <div class="nb-list" id="nbList"></div>
+    <h4 class="nb-sub">熟词库 <span class="nb-sub-num" id="mrNum">0</span></h4>
+    <div class="nb-list" id="mrList"></div>
     <div class="modal-actions">
       <button class="btn" id="btnNbPractice">用生词本练一局</button>
       <button class="btn" id="btnNbExit" style="display:none">恢复全部词库</button>
       <button class="btn" id="btnNbClear">清空</button>
       <button class="btn" id="btnCloseNb">关闭</button>
     </div>
+  </div>
+</div>
+
+<!-- 长按看音标 -->
+<div class="ipa-mask" id="ipaMask">
+  <div class="ipa-card">
+    <div class="ipa-word" id="ipaWord"></div>
+    <div class="ipa-ph" id="ipaPh"></div>
+    <div class="ipa-cn" id="ipaCn"></div>
+    <div class="ipa-tip">点一下屏幕关闭</div>
   </div>
 </div>
 
@@ -1172,13 +1279,425 @@ voter, 选民"></textarea>
     { en: "agenda", cn: "议程" },
     { en: "rhetoric", cn: "言辞" },
     { en: "partisan", cn: "党派的" },
-    { en: "turnout", cn: "投票率" }
+    { en: "turnout", cn: "投票率" },
+    { en: "caucus", cn: "党团会议" },
+    { en: "delegate", cn: "代表" },
+    { en: "nominee", cn: "被提名人" },
+    { en: "nomination", cn: "提名" },
+    { en: "platform", cn: "竞选纲领" },
+    { en: "primary", cn: "初选" },
+    { en: "runoff", cn: "决选" },
+    { en: "landslide", cn: "压倒性胜选" },
+    { en: "constituency", cn: "选区" },
+    { en: "electorate", cn: "全体选民" },
+    { en: "suffrage", cn: "选举权" },
+    { en: "gerrymander", cn: "不公正划区" },
+    { en: "filibuster", cn: "冗长辩论" },
+    { en: "quorum", cn: "法定人数" },
+    { en: "whip", cn: "党鞭" },
+    { en: "backbencher", cn: "后座议员" },
+    { en: "cabinet", cn: "内阁" },
+    { en: "minister", cn: "部长" },
+    { en: "bureaucracy", cn: "官僚体系" },
+    { en: "mandate", cn: "民意授权" },
+    { en: "legislator", cn: "立法者" },
+    { en: "committee", cn: "委员会" },
+    { en: "hearing", cn: "听证会" },
+    { en: "subpoena", cn: "传票" },
+    { en: "impeachment", cn: "弹劾" },
+    { en: "veto", cn: "否决" },
+    { en: "override", cn: "推翻否决" },
+    { en: "amendment", cn: "修正案" },
+    { en: "constitution", cn: "宪法" },
+    { en: "statute", cn: "法规" },
+    { en: "ratification", cn: "批准" },
+    { en: "lobbyist", cn: "游说者" },
+    { en: "lobbying", cn: "游说活动" },
+    { en: "advocacy", cn: "倡导" },
+    { en: "grassroots", cn: "基层民众" },
+    { en: "activist", cn: "活动人士" },
+    { en: "polarization", cn: "两极分化" },
+    { en: "bipartisan", cn: "两党共识的" },
+    { en: "opposition", cn: "反对派" },
+    { en: "regime", cn: "政权" },
+    { en: "dictatorship", cn: "独裁统治" },
+    { en: "authoritarian", cn: "威权的" },
+    { en: "democracy", cn: "民主" },
+    { en: "republic", cn: "共和国" },
+    { en: "federation", cn: "联邦" },
+    { en: "sovereignty", cn: "主权" },
+    { en: "autonomy", cn: "自治" },
+    { en: "secession", cn: "分离" },
+    { en: "coup", cn: "政变" },
+    { en: "uprising", cn: "起义" },
+    { en: "insurgency", cn: "叛乱" },
+    { en: "ceasefire", cn: "停火" },
+    { en: "armistice", cn: "休战" },
+    { en: "belligerent", cn: "交战国" },
+    { en: "alliance", cn: "联盟" },
+    { en: "adversary", cn: "对手" },
+    { en: "deterrence", cn: "威慑" },
+    { en: "escalation", cn: "升级" },
+    { en: "retaliation", cn: "报复" },
+    { en: "embargo", cn: "禁运" },
+    { en: "blockade", cn: "封锁" },
+    { en: "humanitarian", cn: "人道援助的" },
+    { en: "refugee", cn: "难民" },
+    { en: "asylum", cn: "庇护" },
+    { en: "deportation", cn: "驱逐出境" },
+    { en: "immigration", cn: "移民入境" },
+    { en: "border", cn: "边境" },
+    { en: "territorial", cn: "领土的" },
+    { en: "annexation", cn: "吞并" },
+    { en: "dispute", cn: "争端" },
+    { en: "mediation", cn: "调解" },
+    { en: "negotiation", cn: "谈判" },
+    { en: "communique", cn: "公报" },
+    { en: "memorandum", cn: "备忘录" },
+    { en: "accord", cn: "协定" },
+    { en: "protocol", cn: "议定书" },
+    { en: "envoy", cn: "特使" },
+    { en: "delegation", cn: "代表团" },
+    { en: "consul", cn: "领事" },
+    { en: "embassy", cn: "大使馆" },
+    { en: "consulate", cn: "领事馆" },
+    { en: "expatriate", cn: "侨民" },
+    { en: "citizenship", cn: "公民身份" },
+    { en: "naturalization", cn: "入籍" },
+    { en: "census", cn: "人口普查" },
+    { en: "demographics", cn: "人口结构" },
+    { en: "redistricting", cn: "重划选区" },
+    { en: "abstain", cn: "弃权" },
+    { en: "abstention", cn: "弃权票" },
+    { en: "tally", cn: "计票" },
+    { en: "recount", cn: "重新计票" },
+    { en: "fraud", cn: "舞弊" },
+    { en: "rigging", cn: "操纵选举" },
+    { en: "intimidation", cn: "恐吓" },
+    { en: "suppression", cn: "压制" },
+    { en: "propaganda", cn: "宣传" },
+    { en: "disinformation", cn: "虚假信息" },
+    { en: "censorship", cn: "审查" },
+    { en: "whistleblower", cn: "举报人" },
+    { en: "transparency", cn: "透明度" },
+    { en: "accountability", cn: "问责" },
+    { en: "corruption", cn: "腐败" },
+    { en: "graft", cn: "贪污" },
+    { en: "bribery", cn: "贿赂" },
+    { en: "embezzlement", cn: "挪用公款" },
+    { en: "audit", cn: "审计" },
+    { en: "oversight", cn: "监督" },
+    { en: "watchdog", cn: "监督机构" },
+    { en: "regulator", cn: "监管者" },
+    { en: "antitrust", cn: "反垄断" },
+    { en: "monopoly", cn: "垄断" },
+    { en: "protectionism", cn: "保护主义" },
+    { en: "multilateral", cn: "多边的" },
+    { en: "bilateral", cn: "双边的" },
+    { en: "unilateral", cn: "单边的" },
+    { en: "forum", cn: "论坛" },
+    { en: "bloc", cn: "集团" },
+    { en: "quota", cn: "配额" },
+    { en: "export", cn: "出口" },
+    { en: "import", cn: "进口" },
+    { en: "deficit", cn: "赤字" },
+    { en: "surplus", cn: "盈余" },
+    { en: "austerity", cn: "紧缩政策" },
+    { en: "stimulus", cn: "刺激措施" },
+    { en: "fiscal", cn: "财政的" },
+    { en: "monetary", cn: "货币的" },
+    { en: "unemployment", cn: "失业" },
+    { en: "welfare", cn: "福利" },
+    { en: "pension", cn: "养老金" },
+    { en: "healthcare", cn: "医疗保健" },
+    { en: "infrastructure", cn: "基础设施" },
+    { en: "taxation", cn: "税收" },
+    { en: "revenue", cn: "财政收入" },
+    { en: "expenditure", cn: "支出" },
+    { en: "governor", cn: "州长" },
+    { en: "mayor", cn: "市长" },
+    { en: "senator", cn: "参议员" },
+    { en: "governance", cn: "治理" },
+    { en: "institution", cn: "制度机构" },
+    { en: "plebiscite", cn: "公民投票" },
+    { en: "constituent", cn: "选区居民" },
+    { en: "challenger", cn: "挑战者" },
+    { en: "frontrunner", cn: "领跑者" },
+    { en: "debate", cn: "辩论" },
+    { en: "endorsement", cn: "背书" },
+    { en: "donor", cn: "捐款人" },
+    { en: "fundraising", cn: "筹款" },
+    { en: "elector", cn: "选举人" },
+    { en: "appropriation", cn: "拨款" },
+    { en: "levy", cn: "征税" },
+    { en: "diplomat", cn: "外交官" },
+    { en: "consensus", cn: "共识" },
+    { en: "declaration", cn: "宣言" },
+    { en: "resolution", cn: "决议" },
+    { en: "draft", cn: "草案" },
+    { en: "motion", cn: "动议" },
+    { en: "clause", cn: "条款" },
+    { en: "provision", cn: "条款规定" },
+    { en: "repeal", cn: "废除" },
+    { en: "enact", cn: "颁布" },
+    { en: "promulgate", cn: "公布法令" },
+    { en: "jurisdiction", cn: "管辖权" },
+    { en: "judiciary", cn: "司法机关" },
+    { en: "verdict", cn: "裁决" },
+    { en: "indictment", cn: "起诉书" },
+    { en: "prosecution", cn: "检控" },
+    { en: "acquittal", cn: "无罪释放" },
+    { en: "pardon", cn: "赦免" },
+    { en: "immunity", cn: "豁免权" },
+    { en: "extradition", cn: "引渡" },
+    { en: "tribunal", cn: "法庭" },
+    { en: "arbitration", cn: "仲裁" },
+    { en: "settlement", cn: "和解" },
+    { en: "litigation", cn: "诉讼" }
   ];
 
   const DEFAULT_WORDBOOK = wordbook.map(w => ({ ...w }));
+  // 长按卡片查的音标（内置词，CMU 词典转 IPA；自建词没有就显示暂无）
+  const IPA_MAP = {
+    "nominate": "ˈnɑməˌneɪt",
+    "ballot": "ˈbælət",
+    "rally": "ˈræli",
+    "election": "ɪˈlɛkʃən",
+    "resign": "rɪˈzaɪn",
+    "voter": "ˈvoʊtər",
+    "campaign": "kæˈmpeɪn",
+    "poll": "poʊl",
+    "candidate": "ˈkænədɪt",
+    "coalition": "ˌkoʊəˈlɪʃən",
+    "parliament": "ˈpɑrləmɛnt",
+    "congress": "ˈkɑŋgrəs",
+    "senate": "ˈsɛnɪt",
+    "legislation": "ˌlɛdʒəˈsleɪʃən",
+    "policy": "ˈpɑləsi",
+    "sanction": "ˈsæŋkʃən",
+    "treaty": "ˈtriti",
+    "summit": "ˈsəmɪt",
+    "diplomacy": "dɪˈploʊməsi",
+    "ambassador": "æˈmbæsədər",
+    "tariff": "ˈtɛrəf",
+    "inflation": "ˌɪˈnfleɪʃən",
+    "recession": "ˌriˈsɛʃən",
+    "subsidy": "ˈsəbsɪdi",
+    "budget": "ˈbədʒɪt",
+    "scandal": "ˈskændəl",
+    "protest": "ˈproʊˌtɛst",
+    "referendum": "ˌrɛfəˈrɛndəm",
+    "opponent": "əˈpoʊnənt",
+    "incumbent": "ˌɪˈnkəmbənt",
+    "majority": "məˈdʒɔrəti",
+    "concession": "kəˈnsɛʃən",
+    "agenda": "əˈdʒɛndə",
+    "rhetoric": "ˈrɛtərɪk",
+    "partisan": "ˈpɑrtəzən",
+    "turnout": "ˈtəˌrnaʊt",
+    "caucus": "ˈkɔkəs",
+    "delegate": "ˈdɛləˌgeɪt",
+    "nominee": "ˌnɑməˈni",
+    "nomination": "ˌnɑməˈneɪʃən",
+    "platform": "ˈplæˌtfɔrm",
+    "primary": "ˈpraɪˌmɛri",
+    "runoff": "ˈrəˌnɔf",
+    "landslide": "ˈlæˌnslaɪd",
+    "constituency": "kəˈnstɪtʃuənsi",
+    "electorate": "ɪˈlɛktərət",
+    "suffrage": "ˈsəfrɪdʒ",
+    "gerrymander": "ˈdʒɛriˌmændər",
+    "filibuster": "ˈfɪləˌbəstər",
+    "quorum": "ˈkwɔrəm",
+    "whip": "wɪp",
+    "backbencher": "ˌbækˈbɛntʃər",
+    "cabinet": "ˈkæbənət",
+    "minister": "ˈmɪnɪstər",
+    "bureaucracy": "bjʊˈrɑkrəsi",
+    "mandate": "ˈmæˌndeɪt",
+    "legislator": "ˈlɛdʒəˌsleɪtər",
+    "committee": "kəˈmɪti",
+    "hearing": "ˈhirɪŋ",
+    "subpoena": "səˈpinə",
+    "impeachment": "ˌɪˈmpitʃmənt",
+    "veto": "ˈviˌtoʊ",
+    "override": "ˈoʊvəˌrraɪd",
+    "amendment": "əˈmɛndmənt",
+    "constitution": "ˌkɑnstəˈtuʃən",
+    "statute": "ˈstætʃut",
+    "ratification": "ˌrætəfəˈkeɪʃən",
+    "lobbyist": "ˈlɑbiəst",
+    "lobbying": "ˈlɑbiɪŋ",
+    "advocacy": "ˈædvəkəsi",
+    "grassroots": "ˈgræˈsruts",
+    "activist": "ˈæktɪvɪst",
+    "polarization": "ˌpoʊlərɪˈzeɪʃən",
+    "bipartisan": "baɪˈpɑrtɪzən",
+    "opposition": "ˌɑpəˈzɪʃən",
+    "regime": "rəˈʒim",
+    "dictatorship": "dɪˈkteɪtəˌrʃɪp",
+    "authoritarian": "əˌθɔrəˈtɛriən",
+    "democracy": "dɪˈmɑkrəsi",
+    "republic": "riˈpəblɪk",
+    "federation": "ˌfɛdəˈreɪʃən",
+    "sovereignty": "ˈsɑvrənti",
+    "autonomy": "əˈtɑnəmi",
+    "secession": "sɪˈsɛʃən",
+    "coup": "ku",
+    "uprising": "ˈəˌpraɪzɪŋ",
+    "insurgency": "ˌɪˈnsərdʒənsi",
+    "ceasefire": "ˈsiˈsfaɪər",
+    "armistice": "ˈɑrməstəs",
+    "belligerent": "bəˈlɪdʒərənt",
+    "alliance": "əˈlaɪəns",
+    "adversary": "ˈædvəˌrsɛri",
+    "deterrence": "dɪˈtərəns",
+    "escalation": "ˌɛskəˈleɪʃən",
+    "retaliation": "riˌtæliˈeɪʃən",
+    "embargo": "ɛˈmbɑrgoʊ",
+    "blockade": "ˌblɑˈkeɪd",
+    "humanitarian": "ˌjuˌmænəˈtɛriən",
+    "refugee": "ˈrɛfjudʒi",
+    "asylum": "əˈsaɪləm",
+    "deportation": "ˌdipɔˈrteɪʃən",
+    "immigration": "ˌɪməˈgreɪʃən",
+    "border": "ˈbɔrdər",
+    "territorial": "ˌtɛrɪˈtɔriəl",
+    "annexation": "ˌænɛˈkseɪʃən",
+    "dispute": "dɪˈspjut",
+    "mediation": "ˌmidiˈeɪʃən",
+    "negotiation": "nɪˌgoʊʃiˈeɪʃən",
+    "communique": "kəˌmjunəˈkeɪ",
+    "memorandum": "ˌmɛməˈrændəm",
+    "accord": "əˈkɔrd",
+    "protocol": "ˈproʊtəˌkɔl",
+    "envoy": "ˈɛnvɔɪ",
+    "delegation": "ˌdɛləˈgeɪʃən",
+    "consul": "ˈkɑnsəl",
+    "embassy": "ˈɛmbəsi",
+    "consulate": "ˈkɑnsələt",
+    "expatriate": "ɛˈkspeɪtriˌeɪt",
+    "citizenship": "ˈsɪtɪzəˌnʃɪp",
+    "naturalization": "ˈnæˌtʃərəlɪˈzeɪʃən",
+    "census": "ˈsɛnsəs",
+    "demographics": "ˌdɛməˈgræfɪks",
+    "redistricting": "riˈdɪstrɪktɪŋ",
+    "abstain": "əˈbsteɪn",
+    "abstention": "əˈbstɛntʃən",
+    "tally": "ˈtæli",
+    "recount": "ˌriˈkaʊnt",
+    "fraud": "frɔd",
+    "rigging": "ˈrɪgɪŋ",
+    "intimidation": "ˌɪˌntɪmɪˈdeɪʃən",
+    "suppression": "səˈprɛʃən",
+    "propaganda": "ˌprɑpəˈgændə",
+    "disinformation": "dɪˌzɪnfəˈrmeɪʃən",
+    "censorship": "ˈsɛnsəˌrʃɪp",
+    "whistleblower": "ˈwɪsəˌlbloʊər",
+    "transparency": "træˈnspɛrənsi",
+    "accountability": "əˈkaʊntəˌbɪlɪti",
+    "corruption": "kəˈrəpʃən",
+    "graft": "græft",
+    "bribery": "ˈbraɪbəri",
+    "embezzlement": "ɛˈmbɛzəlmənt",
+    "audit": "ˈɔdɪt",
+    "oversight": "ˈoʊvəˌrsaɪt",
+    "watchdog": "ˈwɑˌtʃdɔg",
+    "regulator": "ˈrɛgjəˌleɪtər",
+    "antitrust": "ˌæntaɪˈtrəst",
+    "monopoly": "məˈnɑpəli",
+    "protectionism": "prəˈtɛkʃəˌnɪzəm",
+    "multilateral": "ˌməltɪˈlætərəl",
+    "bilateral": "baɪˈlætərəl",
+    "unilateral": "ˌjunəˈlætərəl",
+    "forum": "ˈfɔrəm",
+    "bloc": "blɑk",
+    "quota": "ˈkwoʊtə",
+    "export": "ˈɛkspɔrt",
+    "import": "ˌɪˈmpɔrt",
+    "deficit": "ˈdɛfəsət",
+    "surplus": "ˈsərpləs",
+    "austerity": "ˌɔˈstɛrɪti",
+    "stimulus": "ˈstɪmjələs",
+    "fiscal": "ˈfɪskəl",
+    "monetary": "ˈmɑnəˌtɛri",
+    "unemployment": "ˌənɪˈmplɔɪmənt",
+    "welfare": "ˈwɛˌlfɛr",
+    "pension": "ˈpɛnʃən",
+    "healthcare": "ˈhɛˌlθkɛr",
+    "infrastructure": "ˌɪnfrəˈstrəktʃər",
+    "taxation": "tæˈkseɪʃən",
+    "revenue": "ˈrɛvəˌnu",
+    "expenditure": "ɪˈkspɛndɪtʃər",
+    "governor": "ˈgəvərnər",
+    "mayor": "meɪər",
+    "senator": "ˈsɛnətər",
+    "governance": "ˈgəvərnəns",
+    "institution": "ˌɪnstɪˈtuʃən",
+    "plebiscite": "ˈplɛbəˌsaɪt",
+    "constituent": "kəˈnstɪtʃuənt",
+    "challenger": "ˈtʃælɪndʒər",
+    "frontrunner": "ˈfrəˌntrənər",
+    "debate": "dəˈbeɪt",
+    "endorsement": "ɛˈndɔrsmənt",
+    "donor": "ˈdoʊnər",
+    "fundraising": "ˈfəˌndreɪsɪŋ",
+    "elector": "ɪˈlɛktər",
+    "appropriation": "əˌproʊpriˈeɪʃən",
+    "levy": "ˈlɛvi",
+    "diplomat": "ˈdɪpləˌmæt",
+    "consensus": "kəˈnsɛnsəs",
+    "declaration": "ˌdɛkləˈreɪʃən",
+    "resolution": "ˌrɛzəˈluʃən",
+    "draft": "dræft",
+    "motion": "ˈmoʊʃən",
+    "clause": "klɔz",
+    "provision": "prəˈvɪʒən",
+    "repeal": "rɪˈpil",
+    "enact": "ɪˈnækt",
+    "promulgate": "proʊˈməlgeɪt",
+    "jurisdiction": "ˌdʒʊrɪˈsdɪkʃən",
+    "judiciary": "dʒuˈdɪʃiˌɛri",
+    "verdict": "ˈvərdɪkt",
+    "indictment": "ˌɪˈndaɪtmənt",
+    "prosecution": "ˌprɑsəˈkjuʃən",
+    "acquittal": "əˈkwɪtəl",
+    "pardon": "ˈpɑrdən",
+    "immunity": "ˌɪˈmjunɪti",
+    "extradition": "ˌɛkstrəˈdɪʃən",
+    "tribunal": "trəˈbjunəl",
+    "arbitration": "ˌɑrbɪˈtreɪʃən",
+    "settlement": "ˈsɛtəlmənt",
+    "litigation": "ˌlɪtəˈgeɪʃən"
+  };
   const WB_KEY = "pengpengle_wordbook";
   const WB_DEFAULT_TAG = "pengpengle_wb_default_v";
-  const WB_DEFAULT_VER = "36-2026-11-11"; // 内置词库版本号：换了就说明加了新词
+  const WB_DEFAULT_VER = "210-2026-11-12"; // 内置词库版本号：换了就说明加了新词
+
+  // ===== 熟词：点英文卡激活后点「熟」，这个词从词库移除、以后不再出现 =====
+  const MR_KEY = "pengpengle_mastered";
+  let mastered = [];
+  (function restoreMastered() {
+    try {
+      const s = JSON.parse(localStorage.getItem(MR_KEY) || "null");
+      if (Array.isArray(s)) {
+        mastered = s.filter(w => w && typeof w.en === "string" && typeof w.cn === "string" && w.en && w.cn)
+                     .map(w => ({ en: w.en, cn: w.cn }));
+      }
+    } catch (e) {}
+  })();
+  function saveMastered() { try { localStorage.setItem(MR_KEY, JSON.stringify(mastered)); } catch (e) {} }
+  function masteredHas(en) { return mastered.some(w => w.en.toLowerCase() === String(en).toLowerCase()); }
+  function masteredAdd(en, cn) {
+    if (!en || !cn || masteredHas(en)) return false;
+    mastered.push({ en: en, cn: cn });
+    saveMastered();
+    return true;
+  }
+  function masteredRemove(en) {
+    mastered = mastered.filter(w => w.en.toLowerCase() !== String(en).toLowerCase());
+    saveMastered();
+  }
 
   // 词库持久化：导入或加载后刷新/重开都还在
   // 内置词库加过词之后（WB_DEFAULT_VER 变了），把缺的内置词并进用户词库，用户自己导入的词保留
@@ -1194,7 +1713,7 @@ voter, 选民"></textarea>
         if (tag !== WB_DEFAULT_VER) {
           const have = new Set(wordbook.map(w => w.en.toLowerCase()));
           DEFAULT_WORDBOOK.forEach(w => {
-            if (!have.has(w.en.toLowerCase())) {
+            if (!have.has(w.en.toLowerCase()) && !masteredHas(w.en)) {
               wordbook.push({ en: w.en, cn: w.cn });
               merged = true;
             }
@@ -2145,7 +2664,10 @@ voter, 选民"></textarea>
 
   // 全局录音是否顶替「没单独录过的词」：默认关（关=没录过的词交给系统朗读，点哪个读哪个）
   function globalAllOn() {
-    try { return localStorage.getItem("pengpengle_global_all") === "1"; } catch (e) { return false; }
+    try {
+      const v = localStorage.getItem("pengpengle_global_all");
+      return v === null ? true : v === "1"; // 没设置过时默认开：自己录的那段就套用到每个词
+    } catch (e) { return true; }
   }
 
   // 某个词该播什么：自己的录音 > （开了"通用覆盖"才用）通用录音 > null（交给系统朗读）
@@ -2230,6 +2752,24 @@ voter, 选民"></textarea>
         <div class="card-shine"></div>
         <div class="card-text">${card.text}</div>
       `;
+      // 长按 500ms 看音标；手指轻微移动或抬起就取消，避免误触
+      let lpTimer = null;
+      let lpX = 0, lpY = 0;
+      div.onpointerdown = (e) => {
+        lpX = e.clientX; lpY = e.clientY;
+        clearTimeout(lpTimer);
+        lpTimer = setTimeout(() => {
+          card._longPress = true;
+          showIpa(card);
+        }, 500);
+      };
+      div.onpointermove = (e) => {
+        if (Math.abs(e.clientX - lpX) > 12 || Math.abs(e.clientY - lpY) > 12) clearTimeout(lpTimer);
+      };
+      div.onpointerup = () => clearTimeout(lpTimer);
+      div.onpointerleave = () => clearTimeout(lpTimer);
+      div.onpointercancel = () => clearTimeout(lpTimer);
+      div.oncontextmenu = (e) => e.preventDefault();
       div.onclick = () => clickCard(idx);
       board.appendChild(div);
     });
@@ -2239,14 +2779,19 @@ voter, 选民"></textarea>
     initAudio();
     const card = cards[idx];
     if (card.disappear) return;
-    if (selected.includes(idx)) return;
+    if (card._longPress) { card._longPress = false; return; } // 刚才是长按，别当成点选
     if (selected.length >= 2) return;
 
     if (setting.clickSound) playClickSound(setting.clickStyle);
     if (card.type === "en") {
-      speak(card.text);
-      starPick = idx; // 这张英文卡"被激活"，点五角星就收进生词本
+      speak(card.text);   // 每点一次都发一次音（重复点同一张也读）
+      starPick = idx;     // 这张英文卡"被激活"：点五角星进生词本，点「熟」进熟词库
+    } else {
+      // 点中文卡时补个音，方便对照上面的词长什么样
+      const enCard = cards.find(c => c.type === "en" && c.text === card.pair && !c.disappear);
+      if (enCard) starPick = cards.indexOf(enCard);
     }
+    if (selected.includes(idx)) { renderBoard(); return; }
     selected.push(idx);
     renderBoard();
 
@@ -2380,6 +2925,87 @@ voter, 选民"></textarea>
     renderStarNum();
   }
 
+  function showIpa(card) {
+    if (!card) return;
+    const en = card.type === "en" ? card.text : card.pair;
+    const cn = card.type === "en" ? card.pair : card.text;
+    const ph = IPA_MAP[String(en).toLowerCase()] || "";
+    if ($("ipaWord")) $("ipaWord").innerText = en;
+    if ($("ipaPh")) $("ipaPh").innerText = ph ? ("/ " + ph + " /") : "（自建词暂无音标）";
+    if ($("ipaCn")) $("ipaCn").innerText = cn || "";
+    const mask = $("ipaMask");
+    if (mask) mask.classList.add("show");
+  }
+
+  function closeIpa() {
+    if ($("ipaMask")) $("ipaMask").classList.remove("show");
+  }
+
+  // 点「熟」：把当前激活的英文词标记为已掌握 —— 收进熟词库、从词库移除、这一对从牌面消失
+  function masterActivated() {
+    if (starPick === null) { toast("先点一张英文卡，再点「熟」"); return; }
+    const c = cards[starPick];
+    if (!c || c.type !== "en" || c.disappear) { toast("先点一张英文卡，再点「熟」"); return; }
+    const en = c.text;
+    const cn = c.pair;
+    masteredAdd(en, cn);
+
+    // 从词库（含生词局）里摘掉，以后不再出现
+    const hadInBook = wordbook.some(w => w.en.toLowerCase() === en.toLowerCase());
+    wordbook = wordbook.filter(w => w.en.toLowerCase() !== en.toLowerCase());
+    if (hadInBook) saveWordbook();
+    if (practiceWords) practiceWords = practiceWords.filter(w => w.en.toLowerCase() !== en.toLowerCase());
+
+    // 牌面上这一对直接消失，并算一次配对，保证这一局还能通关
+    const cnIdx = cards.findIndex(x => x.type === "cn" && x.pair === en && !x.disappear);
+    c.disappear = true;
+    if (cnIdx >= 0) cards[cnIdx].disappear = true;
+    selected = [];
+    starPick = null;
+    matchedCount++;
+    updateInfo();
+    refreshPairChips();
+    renderBoard();
+    if (window.renderMasteredList) renderMasteredList();
+    toast("已标记为熟词，以后不再出现：" + en);
+
+    if (matchedCount >= totalPairs) {
+      clearInterval(timer);
+      if (setting.winSound) playWinSound(setting.winStyle);
+      setTimeout(showResult, 400);
+    }
+  }
+
+  function renderMasteredList() {
+    const box = $("mrList");
+    if ($("mrNum")) $("mrNum").innerText = String(mastered.length);
+    if (!box) return;
+    if (!mastered.length) {
+      box.innerHTML = '<div class="nb-empty">还没有熟词。点一张英文卡（金色★圈起来），再点上面的「熟」，这个词就不再出现了。</div>';
+      return;
+    }
+    box.innerHTML = mastered.map(w => `
+      <div class="nb-row" data-en="${w.en.replace(/"/g, "&quot;")}">
+        <div class="nb-word"><b>${w.en}</b><span>${w.cn}</span></div>
+        <div class="voice-btns">
+          <button class="btn-small mr-play">试听</button>
+          <button class="btn-small mr-back">放回词库</button>
+        </div>
+      </div>`).join("");
+  }
+
+  function unmaster(en) {
+    const w = mastered.find(x => x.en.toLowerCase() === String(en).toLowerCase());
+    masteredRemove(en);
+    if (w && !wordbook.some(x => x.en.toLowerCase() === w.en.toLowerCase())) {
+      wordbook.push({ en: w.en, cn: w.cn });
+      saveWordbook();
+    }
+    refreshPairChips();
+    renderMasteredList();
+    toast("已放回词库：" + en);
+  }
+
   function renderStarNum() {
     if ($("starNum")) $("starNum").innerText = String(notebook.length);
     if ($("btnStar")) {
@@ -2449,6 +3075,7 @@ voter, 选民"></textarea>
 
   function openNotebook() {
     renderNotebookList();
+    if (window.renderMasteredList) renderMasteredList();
     $("starModal").classList.add("show");
   }
 
@@ -2488,6 +3115,23 @@ voter, 选民"></textarea>
           }
         }
         openNotebook();
+      };
+    }
+    if ($("btnMastered")) {
+      $("btnMastered").onclick = () => {
+        initAudio();
+        if (setting.clickSound) playClickSound(setting.clickStyle);
+        masterActivated();
+      };
+    }
+    if ($("ipaMask")) $("ipaMask").onclick = () => closeIpa();
+    if ($("mrList")) {
+      $("mrList").onclick = (e) => {
+        const row = e.target.closest(".nb-row");
+        if (!row) return;
+        const en = row.dataset.en;
+        if (e.target.classList.contains("mr-play")) { initAudio(); speak(en); return; }
+        if (e.target.classList.contains("mr-back")) { unmaster(en); return; }
       };
     }
     if ($("btnCloseNb")) $("btnCloseNb").onclick = () => $("starModal").classList.remove("show");
