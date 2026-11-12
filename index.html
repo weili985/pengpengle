@@ -1241,7 +1241,9 @@ voter, 选民"></textarea>
       <div class="btn-row">
         <button class="btn-small" id="btnTestMatch">试听配对音</button>
         <button class="btn-small" id="btnTestRead">试听朗读</button>
+        <button class="btn-small" id="btnTtsDiag">声音自检</button>
       </div>
+      <div class="voice-hint" id="ttsDiag"></div>
     </div>
 
     <div class="setting-group">
@@ -1975,7 +1977,8 @@ voter, 选民"></textarea>
   let nbGroups = [];   // 多个生词本：[{id,name,words:[{en,cn}]}]
   let nbCurrent = 0;   // 当前选中的那本
   let starPick = null;
-  let lastTap = { idx: -1, t: 0 };   // 双击判定：同一张卡 360ms 内点第二下
+  let lastTap = { idx: -1, t: 0 };   // 双击判定（click 路径）：同一张卡 360ms 内点第二下
+  let lastTapUp = { idx: -1, t: 0 };  // 双击判定（pointerup 路径）：WebView 里更可靠
   let pickCard = null;               // 双击选本时，正在安排的那张卡
   let practiceWords = null;
   let pairsBeforePractice = null; // 练生词局前用户选的对数，退出时还原
@@ -2475,6 +2478,28 @@ voter, 选民"></textarea>
         ? ("本机可用英文朗读人 " + vs.length + " 个，点名就用那一个；选「自动」则按上面的口音挑。")
         : "本机没检测到英文朗读人：到手机「设置 → 系统 → 语言和输入法 → 文字转语音」里装一个英文语音包，否则英文会被中文腔读出来。";
     }
+  }
+
+  // 声音自检：把"没声音"到底卡在哪一步摆到脸上
+  function ttsStatusText() {
+    const bits = [];
+    bits.push("版本 v1.8.3");
+    bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
+    if (window.AndroidTTS) {
+      let ready = "调用出错";
+      try { ready = AndroidTTS.isReady() ? "已就绪" : "还没就绪"; } catch (e) {}
+      bits.push("壳内朗读引擎：" + ready);
+      bits.push("英文朗读人：" + availableVoices().length + " 个");
+    } else {
+      bits.push("运行在浏览器里（没走安卓壳）");
+      bits.push("浏览器英文朗读人：" + availableVoices().length + " 个");
+    }
+    if (setting.voiceName) bits.push("指定朗读人：" + setting.voiceName);
+    return bits.join("　|　");
+  }
+
+  function renderTtsDiag() {
+    if ($("ttsDiag")) $("ttsDiag").innerText = ttsStatusText();
   }
 
   function ttsSpeak(text, tried) {
@@ -3017,7 +3042,18 @@ voter, 选民"></textarea>
       div.onpointermove = (e) => {
         if (Math.abs(e.clientX - lpX) > 12 || Math.abs(e.clientY - lpY) > 12) clearTimeout(lpTimer);
       };
-      div.onpointerup = () => clearTimeout(lpTimer);
+      div.onpointerup = () => {
+        clearTimeout(lpTimer);
+        if (card._longPress) return;                 // 长按看音标，不算双击
+        // 双击判定放在这里：WebView 里第二下可能变成缩放gesture，click 事件不保证来
+        const t2 = Date.now();
+        if (lastTapUp.idx === idx && t2 - lastTapUp.t < 340) {
+          lastTapUp.idx = -1;
+          openNbPick(card);
+          return;
+        }
+        lastTapUp = { idx: idx, t: t2 };
+      };
       div.onpointerleave = () => clearTimeout(lpTimer);
       div.onpointercancel = () => clearTimeout(lpTimer);
       div.oncontextmenu = (e) => e.preventDefault();
@@ -3043,6 +3079,10 @@ voter, 选民"></textarea>
     if (selected.length >= 2) return;
 
     if (setting.clickSound) playClickSound(setting.clickStyle);
+    if (card.type === "en" && !setting.autoRead && !window.__readHintShown) {
+      window.__readHintShown = 1;
+      toast("读词开关是关的：点顶部「读词」右侧的开关，才会读单词");
+    }
     if (card.type === "en") {
       speak(card.text);   // 每点一次都发一次音（重复点同一张也读）
       starPick = idx;     // 这张英文卡"被激活"：点五角星进生词本，点「熟」进熟词库
@@ -3136,6 +3176,7 @@ voter, 选民"></textarea>
     $("selFailStyle").value = setting.failStyle;
     $("selWinStyle").value = setting.winStyle;
     refreshVoiceOptions();
+    renderTtsDiag();
   }
 
   function saveSettingFromUI() {
@@ -3516,6 +3557,8 @@ voter, 选民"></textarea>
         if (starPick !== null) {
           const c = cards[starPick];
           if (c && !c.disappear) {
+            // 建了多本就让你挑；只有一本就直接收，少一步
+            if (nbGroups.length >= 2) { openNbPick(c); return; }
             addToNotebook(c.text, c.pair);
             starPick = null;
             renderBoard();
@@ -3662,6 +3705,13 @@ voter, 选民"></textarea>
       playSuccessSound(ui.successStyle);
       setting.volume = oldVol;
     };
+    if ($("btnTtsDiag")) {
+      $("btnTtsDiag").onclick = () => {
+        renderTtsDiag();
+        ttsSpeak("hello", true);
+      };
+    }
+
     $("btnTestRead").onclick = () => {
       const ui = getUISetting();
       const utt = new SpeechSynthesisUtterance("welcome");
