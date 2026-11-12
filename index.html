@@ -720,15 +720,7 @@
     outline-offset: -3px;
   }
 
-  .card.star-arm::before {
-    content: "★";
-    position: absolute;
-    top: 3px;
-    right: 6px;
-    font-size: 11px;
-    line-height: 1;
-    color: #d99b00;
-  }
+  /* 激活卡现在只用金圈示意；右上角的星改成"已在生词本"的常驻标记 */
 
   .toast {
     position: fixed;
@@ -894,6 +886,79 @@
     margin-top: 12px;
     font-size: 12px;
     color: #8fb9a2;
+  }
+
+  /* ===== 多个生词本：分类标签 + 管理行 + 卡片常驻星 ===== */
+  .nb-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+
+  .nb-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 46vw;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.06);
+    color: #d7f5df;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .nb-tab.on {
+    background: var(--btn-active);
+    border-color: transparent;
+    color: #fff;
+  }
+
+  .nb-tab-num {
+    font-size: 11px;
+    opacity: 0.85;
+  }
+
+  .nb-manage {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .nb-name-input {
+    flex: 1;
+    min-width: 0;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    font-family: inherit;
+    font-size: 12px;
+  }
+
+  .nb-name-input::placeholder {
+    color: #8fb9a2;
+  }
+
+  /* 已经收进生词本的词：卡片右上角常驻一颗星（金圈只表示"刚点过这张卡"） */
+  .card.in-nb::after {
+    content: "★";
+    position: absolute;
+    top: 3px;
+    right: 6px;
+    font-size: 15px;
+    line-height: 1;
+    color: #e08b00;
+    text-shadow: 0 1px 0 #fff, 0 0 4px rgba(255, 255, 255, 0.9);
   }
 
   /* ===== 窄屏兜底：底部三键不许溢出屏幕、标题不许折行、四个胶囊排成整齐一行 ===== */
@@ -1199,6 +1264,13 @@ voter, 选民"></textarea>
 <div class="modal-mask" id="starModal">
   <div class="modal">
     <h3>生词本</h3>
+    <div class="nb-tabs" id="nbTabs"></div>
+    <div class="nb-manage">
+      <input class="nb-name-input" id="nbNameInput" maxlength="12" placeholder="生词本名称">
+      <button class="btn-small" id="btnNbNew">新建本</button>
+      <button class="btn-small" id="btnNbRename">改名</button>
+      <button class="btn-small" id="btnNbDel">删本</button>
+    </div>
     <div class="nb-tip" id="nbTip"></div>
     <div class="nb-list" id="nbList"></div>
     <h4 class="nb-sub">熟词库 <span class="nb-sub-num" id="mrNum">0</span></h4>
@@ -1803,7 +1875,8 @@ voter, 选民"></textarea>
   let selected = [];
   // 生词本相关：notebook 是被收藏的词；starPick 是当前被"激活"的英文卡下标；
   // practiceWords 不为空时表示正在用生词本练（只换这一局用的词池，不动用户词库）
-  let notebook = [];
+  let nbGroups = [];   // 多个生词本：[{id,name,words:[{en,cn}]}]
+  let nbCurrent = 0;   // 当前选中的那本
   let starPick = null;
   let practiceWords = null;
   let pairsBeforePractice = null; // 练生词局前用户选的对数，退出时还原
@@ -2745,6 +2818,8 @@ voter, 选民"></textarea>
       if (card.type === "en") div.classList.add("card-en");
       div.dataset.index = idx;
       if (card.disappear) div.classList.add("disappear");
+      const nbHas = card.type === "en" ? notebookHas(card.text) : notebookHas(card.pair);
+      if (nbHas) div.classList.add("in-nb");
       if (selected.includes(idx)) div.classList.add("selected");
       if (starPick === idx) div.classList.add("star-arm");
 
@@ -2906,22 +2981,58 @@ voter, 选民"></textarea>
     }
   }
 
-  // ===== 生词本 =====
-  const NB_KEY = "pengpengle_notebook";
+  // ===== 生词本：可以建多个，分类存放 =====
+  const NB_KEY = "pengpengle_notebook";       // 旧版只有一个本，留着做迁移
+  const NB_KEY2 = "pengpengle_notebook_v2";   // 新版多个本
+
+  function nbNewId() { return "g" + Date.now().toString(36) + Math.random().toString(36).slice(2, 4); }
 
   (function restoreNotebook() {
     try {
-      const saved = JSON.parse(localStorage.getItem(NB_KEY) || "null");
-      if (Array.isArray(saved)) {
-        notebook = saved
-          .filter(w => w && typeof w.en === "string" && typeof w.cn === "string" && w.en && w.cn)
-          .map(w => ({ en: w.en, cn: w.cn }));
+      const v2 = JSON.parse(localStorage.getItem(NB_KEY2) || "null");
+      if (v2 && Array.isArray(v2.groups) && v2.groups.length) {
+        nbGroups = v2.groups.map(g => ({
+          id: g.id || nbNewId(),
+          name: String(g.name || "生词本").slice(0, 12),
+          words: (Array.isArray(g.words) ? g.words : [])
+            .filter(w => w && typeof w.en === "string" && typeof w.cn === "string" && w.en && w.cn)
+            .map(w => ({ en: w.en, cn: w.cn }))
+        }));
+        nbCurrent = Math.min(Math.max(0, Number(v2.current) || 0), nbGroups.length - 1);
+        return;
       }
-    } catch (e) { notebook = []; }
+      // 老版本只有一本：整本迁成「生词本」
+      const old = JSON.parse(localStorage.getItem(NB_KEY) || "null");
+      const words = Array.isArray(old)
+        ? old.filter(w => w && typeof w.en === "string" && typeof w.cn === "string" && w.en && w.cn)
+            .map(w => ({ en: w.en, cn: w.cn }))
+        : [];
+      nbGroups = [{ id: nbNewId(), name: "生词本", words: words }];
+      nbCurrent = 0;
+      if (words.length) saveNotebook();
+    } catch (e) {
+      nbGroups = [{ id: nbNewId(), name: "生词本", words: [] }];
+      nbCurrent = 0;
+    }
   })();
 
+  function nbTotal() { return nbGroups.reduce((s, g) => s + g.words.length, 0); }
+
+  function nbCur() {
+    if (!nbGroups.length) { nbGroups = [{ id: nbNewId(), name: "生词本", words: [] }]; nbCurrent = 0; }
+    if (nbCurrent < 0) nbCurrent = 0;
+    if (nbCurrent > nbGroups.length - 1) nbCurrent = nbGroups.length - 1;
+    return nbGroups[nbCurrent];
+  }
+
+  function nbFindGroup(en) {
+    const k = String(en).toLowerCase();
+    return nbGroups.find(g => g.words.some(w => w.en.toLowerCase() === k)) || null;
+  }
+
   function saveNotebook() {
-    try { localStorage.setItem(NB_KEY, JSON.stringify(notebook)); } catch (e) {}
+    try { localStorage.setItem(NB_KEY2, JSON.stringify({ groups: nbGroups, current: nbCurrent })); } catch (e) {}
+    try { localStorage.setItem(NB_KEY, JSON.stringify(nbCur().words)); } catch (e) {}
     renderStarNum();
   }
 
@@ -3007,12 +3118,29 @@ voter, 选民"></textarea>
   }
 
   function renderStarNum() {
-    if ($("starNum")) $("starNum").innerText = String(notebook.length);
+    const total = nbTotal();
+    if ($("starNum")) $("starNum").innerText = String(total);
     if ($("btnStar")) {
-      $("btnStar").title = notebook.length
-        ? ("生词本里有 " + notebook.length + " 个词，点这里打开")
+      $("btnStar").title = total
+        ? ("生词本共 " + nbGroups.length + " 本、 " + total + " 个词，点这里打开")
         : "生词本还是空的：先点一张英文卡，再点这颗星";
     }
+  }
+
+  // WebView 里 confirm() 可能弹不出来：改成"再点一次确认"
+  function tapConfirm(btn, label, action) {
+    if (!btn) { action(); return; }
+    if (btn.dataset.arm === "1") {
+      btn.dataset.arm = "";
+      btn.innerText = btn.dataset.orig || "删除";
+      action();
+      return;
+    }
+    btn.dataset.orig = btn.dataset.orig || btn.innerText;
+    btn.dataset.arm = "1";
+    btn.innerText = "再点一次" + label;
+    clearTimeout(btn._t);
+    btn._t = setTimeout(() => { btn.dataset.arm = ""; btn.innerText = btn.dataset.orig; }, 2500);
   }
 
   function toast(msg) {
@@ -3030,33 +3158,44 @@ voter, 选民"></textarea>
   }
 
   function notebookHas(en) {
-    return notebook.some(w => w.en.toLowerCase() === String(en).toLowerCase());
+    const k = String(en).toLowerCase();
+    return nbGroups.some(g => g.words.some(w => w.en.toLowerCase() === k));
   }
 
   function addToNotebook(en, cn) {
     if (!en || !cn) return;
-    if (notebookHas(en)) { toast("生词本里已经有 " + en); return; }
-    notebook.push({ en: en, cn: cn });
+    const owner = nbFindGroup(en);
+    if (owner) { toast("「" + owner.name + "」里已经有 " + en); return; }
+    nbCur().words.push({ en: en, cn: cn });
     saveNotebook();
     renderNotebookList();
+    renderBoard();
     const b = $("btnStar");
     if (b) { b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); }
-    toast("已收进生词本：" + en);
+    toast("已收进「" + nbCur().name + "」：" + en);
   }
 
   function removeFromNotebook(en) {
-    notebook = notebook.filter(w => w.en.toLowerCase() !== String(en).toLowerCase());
+    const g = nbCur();
+    g.words = g.words.filter(w => w.en.toLowerCase() !== String(en).toLowerCase());
     saveNotebook();
     renderNotebookList();
+    renderBoard();
   }
 
   function renderNotebookList() {
     const box = $("nbList");
     if (!box) return;
-    if (!notebook.length) {
-      box.innerHTML = '<div class="nb-empty">还没有生词。点一张英文卡（金色★圈起来），再点顶部那颗星，就收进来了。</div>';
+    const g = nbCur();
+    const tabs = $("nbTabs");
+    if (tabs) {
+      tabs.innerHTML = nbGroups.map((x, i) => `
+        <div class="nb-tab${i === nbCurrent ? " on" : ""}" data-idx="${i}">${x.name}<span class="nb-tab-num">${x.words.length}</span></div>`).join("");
+    }
+    if (!g.words.length) {
+      box.innerHTML = '<div class="nb-empty">「' + g.name + '」还没有词。点一张英文卡（金色★圈起来），再点上面的五角星，就收进这个本里。</div>';
     } else {
-      box.innerHTML = notebook.map(w => `
+      box.innerHTML = g.words.map(w => `
         <div class="nb-row" data-en="${w.en.replace(/"/g, "&quot;")}">
           <div class="nb-word"><b>${w.en}</b><span>${w.cn}</span></div>
           <div class="voice-btns">
@@ -3066,11 +3205,15 @@ voter, 选民"></textarea>
         </div>`).join("");
     }
     if ($("nbTip")) {
-      $("nbTip").innerText = "共 " + notebook.length + " 个词，只存在这台设备上。点英文卡（金色★圈起）再点顶部五角星可收录；"
-        + "「用生词本练一局」只打生词本里的词，练完点「恢复全部词库」回到原词库。";
+      $("nbTip").innerText = "当前「" + g.name + "」" + g.words.length + " 个词；共 " + nbGroups.length + " 本、合计 " + nbTotal() + " 个词，只存在这台设备上。"
+        + "点英文卡（金色★圈起）再点五角星，收进当前这本。";
     }
-    if ($("btnNbPractice")) $("btnNbPractice").innerText = practiceWords ? "重开生词局" : "用生词本练一局";
+    if ($("btnNbPractice")) {
+      $("btnNbPractice").innerText = practiceWords ? "重开这本" : "用这本练一局";
+    }
     if ($("btnNbExit")) $("btnNbExit").style.display = practiceWords ? "" : "none";
+    if ($("nbNameInput")) $("nbNameInput").value = g.name;
+    renderStarNum();
   }
 
   function openNotebook() {
@@ -3080,12 +3223,13 @@ voter, 选民"></textarea>
   }
 
   function practiceNotebook() {
-    if (notebook.length < 4) {
-      alert("生词本至少要有 4 个词才能开练（现在 " + notebook.length + " 个）");
+    const g = nbCur();
+    if (g.words.length < 4) {
+      toast("「" + g.name + "」至少要有 4 个词才能开练（现在 " + g.words.length + " 个）");
       return;
     }
     if (!practiceWords) pairsBeforePractice = totalPairs;
-    practiceWords = notebook.map(w => ({ en: w.en, cn: w.cn }));
+    practiceWords = g.words.map(w => ({ en: w.en, cn: w.cn }));
     if (totalPairs > practiceWords.length) totalPairs = Math.max(2, practiceWords.length);
     $("starModal").classList.remove("show");
     refreshPairChips();
@@ -3125,6 +3269,51 @@ voter, 选民"></textarea>
       };
     }
     if ($("ipaMask")) $("ipaMask").onclick = () => closeIpa();
+    if ($("nbTabs")) {
+      $("nbTabs").onclick = (e) => {
+        const t = e.target.closest(".nb-tab");
+        if (!t) return;
+        nbCurrent = Number(t.dataset.idx) || 0;
+        saveNotebook();
+        renderNotebookList();
+      };
+    }
+    if ($("btnNbNew")) {
+      $("btnNbNew").onclick = () => {
+        let name = (($("nbNameInput") && $("nbNameInput").value) || "").trim().slice(0, 12);
+        if (!name) name = "分类" + (nbGroups.length + 1);
+        while (nbGroups.some(g => g.name === name)) name = name + "2";
+        nbGroups.push({ id: nbNewId(), name: name, words: [] });
+        nbCurrent = nbGroups.length - 1;
+        saveNotebook();
+        renderNotebookList();
+        toast("新建了生词本「" + name + "」");
+      };
+    }
+    if ($("btnNbRename")) {
+      $("btnNbRename").onclick = () => {
+        const name = (($("nbNameInput") && $("nbNameInput").value) || "").trim().slice(0, 12);
+        if (!name) { toast("先在框里写个名字"); return; }
+        nbCur().name = name;
+        saveNotebook();
+        renderNotebookList();
+        toast("这本改名为「" + name + "」");
+      };
+    }
+    if ($("btnNbDel")) {
+      $("btnNbDel").onclick = () => {
+        if (nbGroups.length <= 1) { toast("至少要留一个生词本"); return; }
+        const g = nbCur();
+        tapConfirm($("btnNbDel"), "删本", () => {
+          nbGroups.splice(nbCurrent, 1);
+          nbCurrent = 0;
+          saveNotebook();
+          renderNotebookList();
+          renderBoard();
+          toast("已删除生词本「" + g.name + "」");
+        });
+      };
+    }
     if ($("mrList")) {
       $("mrList").onclick = (e) => {
         const row = e.target.closest(".nb-row");
@@ -3139,18 +3328,22 @@ voter, 选民"></textarea>
     if ($("btnNbExit")) $("btnNbExit").onclick = () => exitPractice();
     if ($("btnNbClear")) {
       $("btnNbClear").onclick = () => {
-        if (!notebook.length) return;
-        if (!confirm("清空生词本？（词库不受影响）")) return;
-        notebook = [];
-        // 清空时如果正在用生词本练，直接回到全部词库
-        if (practiceWords) {
-          practiceWords = null;
-          if (pairsBeforePractice) { totalPairs = pairsBeforePractice; pairsBeforePractice = null; }
-          refreshPairChips();
-          startGame();
-        }
-        saveNotebook();
-        renderNotebookList();
+        const g = nbCur();
+        if (!g.words.length) { toast("「" + g.name + "」本来就是空的"); return; }
+        tapConfirm($("btnNbClear"), "清空", () => {
+          g.words = [];
+          // 清空时如果正在用生词本练，直接回到全部词库
+          if (practiceWords) {
+            practiceWords = null;
+            if (pairsBeforePractice) { totalPairs = pairsBeforePractice; pairsBeforePractice = null; }
+            refreshPairChips();
+            startGame();
+          }
+          saveNotebook();
+          renderNotebookList();
+          renderBoard();
+          toast("已清空「" + g.name + "」");
+        });
       };
     }
     if ($("nbList")) {
