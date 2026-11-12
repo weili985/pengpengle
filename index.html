@@ -1135,7 +1135,7 @@
     flex: 1;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 12px 14px 108px;
+    padding: 12px 14px 136px;
   }
   .wbfull-row {
     display: flex;
@@ -1149,18 +1149,82 @@
   }
   .wbfull-row .wf-en { color: #d7c4ff; font-weight: 700; font-size: 16px; }
   .wbfull-row .wf-cn { color: #cfe3d9; font-size: 14px; text-align: right; }
+  /* 状态筛选（全部/未学习/复习中/已标熟） */
+  .wb-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 12px 14px 6px;
+    overflow-x: auto;
+  }
+  .wb-tab {
+    flex: none;
+    padding: 7px 14px;
+    border-radius: 18px;
+    border: 1px solid rgba(233, 180, 76, 0.35);
+    background: rgba(255, 255, 255, 0.05);
+    color: #b9cdc2;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .wb-tab.on {
+    background: #e9b44c;
+    border-color: #e9b44c;
+    color: #12271c;
+  }
+  .wb-count {
+    padding: 2px 16px 0;
+    color: #9fb8ab;
+    font-size: 12px;
+  }
+
+  /* 底部悬浮五格功能条 */
   .wbfull-bar {
     position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
     display: flex;
-    gap: 10px;
-    padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
-    background: linear-gradient(180deg, rgba(12, 30, 21, 0), rgba(12, 30, 21, 0.94) 34%);
+    justify-content: space-between;
+    gap: 2px;
+    padding: 8px 6px;
+    border-radius: 22px;
+    background: rgba(16, 38, 28, 0.97);
+    border: 1px solid rgba(233, 180, 76, 0.45);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   }
-  .wbfull-bar .btn { height: 48px; font-size: 15px; }
-  .wbfull-bar .btn-ear { flex: 0 0 68px; font-size: 24px; padding: 0; }
+  .wb-fn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: 0;
+    padding: 4px 0 2px;
+    color: #e9b44c;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .wb-fn svg {
+    width: 24px;
+    height: 24px;
+    stroke: #e9b44c;
+    stroke-width: 1.7;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .wb-fn .wb-fn-txt-abc {
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #e9b44c;
+    height: 24px;
+    display: flex;
+    align-items: center;
+  }
+  .wb-fn:active { opacity: 0.7; }
 
   /* ===== 沉浸式刷题（翻卡自测，全屏一次一个词） ===== */
   .drill {
@@ -1220,6 +1284,19 @@
   .drill-btns .btn { height: 48px; font-size: 14px; }
   #btnDrillNo { background: #4a2323; border-color: #b4574f; }
   #btnDrillYes { background: #2f6b4f; border-color: #e9b44c; }
+  .spell-tile {
+    min-width: 46px;
+    height: 50px;
+    padding: 0 10px;
+    border-radius: 11px;
+    border: 1px solid rgba(233, 180, 76, 0.6);
+    background: #1c4030;
+    color: #e6d7ff;
+    font-size: 23px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .spell-tile.used { opacity: 0.22; }
   .drill-end { display: none; text-align: center; width: 100%; }
   .drill-end.show { display: block; }
   .drill-end .btn-row { margin-top: 26px; padding: 0 22px; }
@@ -1378,10 +1455,121 @@ voter, 选民"></textarea>
     <div class="wbfull-title" id="wbFullTitle">粘贴板里的单词</div>
     <button class="wbfull-close" id="btnWbFullClose">关闭</button>
   </div>
+  <div class="wb-tabs" id="wbTabs">
+    <button class="wb-tab on" data-f="all">全部</button>
+    <button class="wb-tab" data-f="new">未学习</button>
+    <button class="wb-tab" data-f="rev">复习中</button>
+    <button class="wb-tab" data-f="done">已标熟</button>
+  </div>
+  <div class="wb-count" id="wbCount">0 词</div>
   <div class="wbfull-list" id="wbFullList"></div>
   <div class="wbfull-bar">
-    <button class="btn btn-ear" id="btnWbEar" title="戴耳机进入沉浸式刷题">🎧</button>
-    <button class="btn" id="btnWbDrill">开始刷题（翻卡）</button>
+    <button class="wb-fn" id="btnFnDrill" title="沉浸刷词：全屏翻卡自测">
+      <svg viewBox="0 0 24 24"><rect x="4" y="4" width="10" height="16" rx="1.5"/><path d="M7 8h4M7 12h4"/><path d="M15 17l4-4 1.8 1.8-4 4-1.8-1.8z"/></svg>
+      <span>沉浸刷词</span>
+    </button>
+    <button class="wb-fn" id="btnFnListen" title="随身听：一条条自动连播">
+      <svg viewBox="0 0 24 24"><path d="M4 14a8 8 0 0 1 16 0"/><rect x="3" y="14" width="4" height="7" rx="2"/><rect x="17" y="14" width="4" height="7" rx="2"/></svg>
+      <span>随身听</span>
+    </button>
+    <button class="wb-fn" id="btnFnDict" title="听写：听音写英文">
+      <svg viewBox="0 0 24 24"><path d="M5 19l1-4 9-9 3 3-9 9-4 1z"/><path d="M14 6l4 4"/></svg>
+      <span>听写</span>
+    </button>
+    <button class="wb-fn" id="btnFnSpell" title="随手拼：点字母拼出单词">
+      <span class="wb-fn-txt-abc">abc</span>
+      <span>随手拼</span>
+    </button>
+    <button class="wb-fn" id="btnFnExport" title="导出：复制或存成 txt">
+      <svg viewBox="0 0 24 24"><path d="M12 4v10"/><path d="M8 11l4 4 4-4"/><path d="M5 18h14"/></svg>
+      <span>导出</span>
+    </button>
+  </div>
+</div>
+
+<!-- 随身听 -->
+<div class="drill" id="listenBox">
+  <div class="drill-top">
+    <span id="listenProg">1/1</span>
+    <button class="wbfull-close" id="btnListenClose">退出</button>
+  </div>
+  <div style="text-align:center;padding:0 20px;">
+    <div class="drill-word" id="listenWord">word</div>
+    <div class="drill-cn" id="listenCn"></div>
+    <div class="drill-hint" id="listenHint">自动连播中…</div>
+  </div>
+  <div class="drill-btns">
+    <button class="btn" id="btnListenPrev">◀ 上一个</button>
+    <button class="btn" id="btnListenPlay">暂停</button>
+    <button class="btn" id="btnListenNext">下一个 ▶</button>
+  </div>
+</div>
+
+<!-- 听写 -->
+<div class="drill" id="dictBox">
+  <div class="drill-top">
+    <span id="dictProg">1/1</span>
+    <button class="wbfull-close" id="btnDictClose">退出</button>
+  </div>
+  <div id="dictMain" style="width:100%;padding:0 22px;box-sizing:border-box;text-align:center;">
+    <button class="btn" id="btnDictPlay" style="width:180px;height:60px;font-size:17px;margin:0 auto 18px;white-space:nowrap;">🔊 再听一遍</button>
+    <div class="drill-hint" id="dictTips" style="margin:0 0 12px;">听音写英文，写完按「检查」</div>
+    <input id="dictInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"
+      style="width:100%;box-sizing:border-box;padding:14px 12px;border-radius:12px;border:1px solid var(--border-gold);background:#153024;color:#fff;font-size:20px;text-align:center;letter-spacing:1px;">
+    <div class="drill-btns" id="dictBtns" style="position:static;padding:18px 0 0;">
+      <button class="btn" id="btnDictShow">看答案</button>
+      <button class="btn" id="btnDictSkip">跳过</button>
+      <button class="btn" id="btnDictCheck">检查</button>
+    </div>
+  </div>
+  <div class="drill-end" id="dictEnd">
+    <div class="drill-word">听写完成</div>
+    <div class="drill-cn" id="dictEndText"></div>
+    <div class="btn-row">
+      <button class="btn" id="btnDictAgain">再听写错的</button>
+      <button class="btn" id="btnDictExit">结束</button>
+    </div>
+  </div>
+</div>
+
+<!-- 随手拼 -->
+<div class="drill" id="spellBox">
+  <div class="drill-top">
+    <span id="spellProg">1/1</span>
+    <button class="wbfull-close" id="btnSpellClose">退出</button>
+  </div>
+  <div id="spellMain" style="width:100%;padding:0 18px;box-sizing:border-box;text-align:center;">
+    <div class="drill-cn" id="spellCn" style="margin-top:0;font-size:26px;"></div>
+    <div id="spellSlots" style="min-height:56px;margin:16px 0;font-size:28px;font-weight:800;color:#e6d7ff;letter-spacing:6px;"></div>
+    <div id="spellTiles" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;"></div>
+  </div>
+  <div class="drill-end" id="spellEnd">
+    <div class="drill-word">拼完了</div>
+    <div class="drill-cn" id="spellEndText"></div>
+    <div class="btn-row">
+      <button class="btn" id="btnSpellAgain">再拼错的</button>
+      <button class="btn" id="btnSpellExit">结束</button>
+    </div>
+  </div>
+  <div class="drill-btns" id="spellBtns">
+    <button class="btn" id="btnSpellBack">撤销</button>
+    <button class="btn" id="btnSpellSkip">跳过</button>
+    <button class="btn" id="btnSpellCheck">检查</button>
+  </div>
+</div>
+
+<!-- 导出 -->
+<div class="drill" id="exportBox">
+  <div class="drill-top">
+    <span id="exportCount">0 词</span>
+    <button class="wbfull-close" id="btnExportClose">关闭</button>
+  </div>
+  <div style="width:100%;padding:8px 16px 0;box-sizing:border-box;">
+    <textarea id="exportText" readonly style="width:100%;height:58vh;box-sizing:border-box;padding:12px;border-radius:12px;border:1px solid var(--border-gold);background:#153024;color:#cfe3d9;font-size:14px;line-height:1.7;resize:none;"></textarea>
+  </div>
+  <div class="btn-row" style="position:absolute;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom));padding:0 16px;">
+    <button class="btn" id="btnExportCopy">复制全部</button>
+    <button class="btn" id="btnExportSave">存成 txt</button>
   </div>
 </div>
 
@@ -2807,7 +2995,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.9.0");
+    bits.push("版本 v1.10.0");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -4392,26 +4580,51 @@ voter, 选民"></textarea>
       .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
 
+  // ---------- 全屏词表：全部 / 未学习 / 复习中 / 已标熟 + 底部五个功能 ----------
+  let wbFilter = "all";
+  let wbShown = [];
+
+  function wbStatusOf(w) {
+    const en = String(w.en || "").toLowerCase();
+    if (mastered.some(x => String(x.en).toLowerCase() === en)) return "done";
+    if (notebookHas(en)) return "rev";
+    return "new";
+  }
+
+  function renderWbFull() {
+    wbShown = wbFilter === "all"
+      ? wbFullWords.slice()
+      : wbFullWords.filter(w => wbStatusOf(w) === wbFilter);
+    if ($("wbCount")) $("wbCount").innerText = wbShown.length + " 词";
+    if ($("wbFullTitle")) $("wbFullTitle").innerText = "粘贴板里的 " + wbFullWords.length + " 个词";
+    document.querySelectorAll(".wb-tab").forEach(t => t.classList.toggle("on", t.dataset.f === wbFilter));
+    if ($("wbFullList")) {
+      if (!wbShown.length) {
+        $("wbFullList").innerHTML = '<div class="nb-empty">这一栏还是空的：点上面的标签换一栏看看。</div>';
+      } else {
+        $("wbFullList").innerHTML = wbShown.map(w =>
+          '<div class="wbfull-row"><span class="wf-en">' + escHtml(w.en) +
+          '</span><span class="wf-cn">' + escHtml(w.cn) + '</span></div>').join("");
+      }
+    }
+  }
+
   // 双击词库里那块粘贴板：把里面的词条摊成整屏清单
   function openWbFull() {
     const ta = $("wordInput");
     const parsed = parseWordbookText(ta ? ta.value : "");
     wbFullWords = parsed.list;
     if (!wbFullWords.length) { toast("粘贴板里还没有词条：一行一条「英文, 中文」"); return; }
-    if ($("wbFullTitle")) $("wbFullTitle").innerText = "粘贴板里的 " + wbFullWords.length + " 个词";
-    if ($("wbFullList")) {
-      $("wbFullList").innerHTML = wbFullWords.map(w =>
-        '<div class="wbfull-row"><span class="wf-en">' + escHtml(w.en) +
-        '</span><span class="wf-cn">' + escHtml(w.cn) + '</span></div>').join("");
-    }
+    wbFilter = "all";
+    renderWbFull();
     $("wbFull").classList.add("show");
   }
 
   function closeWbFull() { if ($("wbFull")) $("wbFull").classList.remove("show"); }
 
   function startDrill(list) {
-    drillWords = (list || wbFullWords).map(w => ({ en: w.en, cn: w.cn }));
-    if (!drillWords.length) { toast("这份词表是空的"); return; }
+    drillWords = (list || wbShown).map(w => ({ en: w.en, cn: w.cn }));
+    if (!drillWords.length) { toast("这一栏没有词"); return; }
     drillIdx = 0; drillMiss = [];
     $("drillMain").style.display = "block";
     $("drillBtns").style.display = "flex";
@@ -4460,11 +4673,275 @@ voter, 选民"></textarea>
     drillWords = []; drillMiss = []; drillIdx = 0;
   }
 
+  /* ---------- 随身听：一条条自动连播 ---------- */
+  let listenList = [], listenIdx = 0, listenTimer = null, listenPlaying = false;
+
+  function startListen(list) {
+    listenList = (list || wbShown).map(w => ({ en: w.en, cn: w.cn }));
+    if (!listenList.length) { toast("这一栏没有词"); return; }
+    listenIdx = 0; listenPlaying = true;
+    if ($("btnListenPlay")) $("btnListenPlay").innerText = "暂停";
+    $("listenBox").classList.add("show");
+    listenStep();
+  }
+
+  function listenStep() {
+    if (!listenPlaying) return;
+    const w = listenList[listenIdx];
+    if (!w) { stopListen(true); return; }
+    $("listenProg").innerText = (listenIdx + 1) + "/" + listenList.length;
+    $("listenWord").innerText = w.en;
+    $("listenCn").innerText = w.cn;
+    $("listenHint").innerText = "自动连播中…点「暂停」可以停下来";
+    initAudio();
+    speak(w.en, true);
+    clearTimeout(listenTimer);
+    listenTimer = setTimeout(() => {
+      if (!listenPlaying) return;
+      listenIdx++;
+      if (listenIdx >= listenList.length) { stopListen(true); return; }
+      listenStep();
+    }, 2600);
+  }
+
+  function listenToggle() {
+    listenPlaying = !listenPlaying;
+    if ($("btnListenPlay")) $("btnListenPlay").innerText = listenPlaying ? "暂停" : "继续";
+    if (listenPlaying) listenStep(); else clearTimeout(listenTimer);
+  }
+
+  function listenMove(d) {
+    listenIdx = Math.max(0, Math.min(listenList.length - 1, listenIdx + d));
+    listenPlaying = true;
+    if ($("btnListenPlay")) $("btnListenPlay").innerText = "暂停";
+    listenStep();
+  }
+
+  function stopListen(done) {
+    clearTimeout(listenTimer); listenTimer = null; listenPlaying = false;
+    if ($("listenBox")) $("listenBox").classList.remove("show");
+    listenList = []; listenIdx = 0;
+    if (done) toast("随身听播完了");
+  }
+
+  /* ---------- 听写：听音写英文 ---------- */
+  let dictList = [], dictIdx = 0, dictMiss = [], dictDone = false;
+
+  function startDict(list) {
+    dictList = (list || wbShown).map(w => ({ en: w.en, cn: w.cn }));
+    if (!dictList.length) { toast("这一栏没有词"); return; }
+    dictIdx = 0; dictMiss = [];
+    $("dictMain").style.display = "block";
+    $("dictBtns").style.display = "flex";
+    $("dictEnd").classList.remove("show");
+    $("dictBox").classList.add("show");
+    renderDict();
+  }
+
+  function renderDict() {
+    const w = dictList[dictIdx];
+    if (!w) return;
+    dictDone = false;
+    $("dictProg").innerText = (dictIdx + 1) + "/" + dictList.length;
+    $("dictInput").value = "";
+    $("dictTips").innerText = "听音写英文，写完按「检查」";
+    initAudio();
+    speak(w.en, true);
+    setTimeout(() => { try { $("dictInput").focus(); } catch (e) {} }, 260);
+  }
+
+  function dictCheck() {
+    const w = dictList[dictIdx];
+    if (!w || dictDone) return;
+    const v = ($("dictInput").value || "").trim().toLowerCase();
+    if (!v) { toast("先写点东西再检查"); return; }
+    dictDone = true;
+    if (v === w.en.toLowerCase()) {
+      $("dictTips").innerText = "✔ 写对了：" + w.en;
+    } else {
+      if (!dictMiss.some(x => x.en === w.en)) dictMiss.push(w);
+      $("dictTips").innerText = "✘ 正确拼写：" + w.en;
+    }
+    setTimeout(() => {
+      dictIdx++;
+      if (dictIdx >= dictList.length) finishDict(); else renderDict();
+    }, 1500);
+  }
+
+  function dictShow() {
+    const w = dictList[dictIdx];
+    if (!w || dictDone) return;
+    dictDone = true;
+    if (!dictMiss.some(x => x.en === w.en)) dictMiss.push(w);
+    $("dictTips").innerText = "答案：" + w.en + "（" + w.cn + "）";
+  }
+
+  function dictSkip() {
+    const w = dictList[dictIdx];
+    if (w && !dictMiss.some(x => x.en === w.en)) dictMiss.push(w);
+    dictIdx++;
+    if (dictIdx >= dictList.length) finishDict(); else renderDict();
+  }
+
+  function finishDict() {
+    $("dictMain").style.display = "none";
+    $("dictBtns").style.display = "none";
+    $("dictEnd").classList.add("show");
+    $("dictEndText").innerText = "共 " + dictList.length + " 个词，写错 " + dictMiss.length + " 个";
+  }
+
+  function closeDict() {
+    if ($("dictBox")) $("dictBox").classList.remove("show");
+    dictList = []; dictMiss = []; dictIdx = 0;
+  }
+
+  /* ---------- 随手拼：点字母把单词拼出来 ---------- */
+  let spellList = [], spellIdx = 0, spellMiss = [], spellTyped = [], spellLetters = [], spellDone = false;
+
+  function startSpell(list) {
+    spellList = (list || wbShown).map(w => ({ en: w.en, cn: w.cn }));
+    if (!spellList.length) { toast("这一栏没有词"); return; }
+    spellIdx = 0; spellMiss = [];
+    $("spellMain").style.display = "block";
+    $("spellBtns").style.display = "flex";
+    $("spellEnd").classList.remove("show");
+    $("spellBox").classList.add("show");
+    renderSpell();
+  }
+
+  function renderSpell() {
+    const w = spellList[spellIdx];
+    if (!w) return;
+    spellDone = false;
+    spellTyped = [];
+    $("spellProg").innerText = (spellIdx + 1) + "/" + spellList.length;
+    $("spellCn").innerText = w.cn;
+    const letters = String(w.en).split("").map(ch => ({ ch: ch, used: false }));
+    for (let i = letters.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = letters[i]; letters[i] = letters[j]; letters[j] = t;
+    }
+    spellLetters = letters;
+    drawSpell();
+  }
+
+  function drawSpell() {
+    if ($("spellSlots")) $("spellSlots").innerText = spellTyped.map(x => x.ch).join("") || "⋯";
+    if ($("spellTiles")) {
+      $("spellTiles").innerHTML = spellLetters.map((l, i) =>
+        '<button class="spell-tile' + (l.used ? " used" : "") + '" data-i="' + i + '">' + escHtml(l.ch) + '</button>').join("");
+    }
+  }
+
+  function spellTap(i) {
+    const l = spellLetters[i];
+    if (!l || l.used || spellDone) return;
+    l.used = true;
+    spellTyped.push(l);
+    drawSpell();
+  }
+
+  function spellBack() {
+    if (spellDone) return;
+    const l = spellTyped.pop();
+    if (l) l.used = false;
+    drawSpell();
+  }
+
+  function spellCheck() {
+    const w = spellList[spellIdx];
+    if (!w || spellDone) return;
+    const built = spellTyped.map(x => x.ch).join("");
+    if (!built) { toast("先点几个字母"); return; }
+    spellDone = true;
+    if (built.toLowerCase() === String(w.en).toLowerCase()) {
+      $("spellCn").innerText = "✔ 拼对了：" + w.en;
+      setTimeout(() => { nextSpell(false); }, 900);
+    } else {
+      if (!spellMiss.some(x => x.en === w.en)) spellMiss.push(w);
+      $("spellCn").innerText = "✘ 正确：" + w.en;
+      setTimeout(() => { nextSpell(true); }, 1600);
+    }
+  }
+
+  function nextSpell() {
+    spellIdx++;
+    if (spellIdx >= spellList.length) finishSpell(); else renderSpell();
+  }
+
+  function spellSkip() {
+    const w = spellList[spellIdx];
+    if (w && !spellMiss.some(x => x.en === w.en)) spellMiss.push(w);
+    spellDone = true;
+    nextSpell();
+  }
+
+  function finishSpell() {
+    $("spellMain").style.display = "none";
+    $("spellBtns").style.display = "none";
+    $("spellEnd").classList.add("show");
+    $("spellEndText").innerText = "共 " + spellList.length + " 个词，拼错 " + spellMiss.length + " 个";
+  }
+
+  function closeSpell() {
+    if ($("spellBox")) $("spellBox").classList.remove("show");
+    spellList = []; spellMiss = []; spellIdx = 0;
+  }
+
+  /* ---------- 导出：复制或存成 txt ---------- */
+  function openExport() {
+    if (!wbShown.length) { toast("这一栏没有词"); return; }
+    $("exportText").value = wbShown.map(w => w.en + "," + w.cn).join("\n");
+    $("exportCount").innerText = wbShown.length + " 词";
+    $("exportBox").classList.add("show");
+  }
+
+  function exportCopy() {
+    const ta = $("exportText");
+    if (!ta) return;
+    const txt = ta.value;
+    const done = () => toast("已复制，可以粘到微信/备忘录里");
+    const fallback = () => {
+      try { ta.focus(); ta.select(); ta.setSelectionRange(0, txt.length); } catch (e) {}
+      let ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      if (ok) { done(); return; }
+      toast("系统不肯自动复制：框里的字已经全选，长按它点「复制」就行");
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(done).catch(fallback);
+      return;
+    }
+    fallback();
+  }
+
+  function exportSave() {
+    try {
+      const txt = $("exportText").value;
+      const blob = new Blob(["\ufeff" + txt], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "词库-" + new Date().toISOString().slice(0, 10) + ".txt";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
+      toast("已存成 txt；要是没弹保存框，就用「复制全部」");
+    } catch (e) { toast("这个环境不给存文件，用「复制全部」吧"); }
+  }
+
   function bindWbFullEvents() {
     if ($("btnWbFullClose")) $("btnWbFullClose").onclick = closeWbFull;
     if ($("wbFullHint")) $("wbFullHint").onclick = openWbFull;   // 手机上双击不灵时的备用入口
-    if ($("btnWbEar")) $("btnWbEar").onclick = () => { initAudio(); startDrill(wbFullWords); };
-    if ($("btnWbDrill")) $("btnWbDrill").onclick = () => { initAudio(); startDrill(wbFullWords); };
+
+    if ($("wbTabs")) {
+      $("wbTabs").onclick = (ev) => {
+        const t = ev.target.closest ? ev.target.closest(".wb-tab") : null;
+        if (!t) return;
+        wbFilter = t.dataset.f || "all";
+        renderWbFull();
+      };
+    }
     if ($("wbFullList")) {
       $("wbFullList").onclick = (ev) => {
         const row = ev.target.closest ? ev.target.closest(".wbfull-row") : null;
@@ -4473,6 +4950,15 @@ voter, 选民"></textarea>
         if (en) { initAudio(); speak(en.innerText, true); }
       };
     }
+
+    // 底部五格
+    if ($("btnFnDrill")) $("btnFnDrill").onclick = () => { initAudio(); startDrill(wbShown); };
+    if ($("btnFnListen")) $("btnFnListen").onclick = () => { initAudio(); startListen(wbShown); };
+    if ($("btnFnDict")) $("btnFnDict").onclick = () => { initAudio(); startDict(wbShown); };
+    if ($("btnFnSpell")) $("btnFnSpell").onclick = () => { initAudio(); startSpell(wbShown); };
+    if ($("btnFnExport")) $("btnFnExport").onclick = () => { initAudio(); openExport(); };
+
+    // 沉浸刷词
     if ($("drillMain")) $("drillMain").onclick = revealDrill;
     if ($("btnDrillPrev")) $("btnDrillPrev").onclick = () => { if (drillIdx > 0) { drillIdx--; renderDrill(); } };
     if ($("btnDrillNo")) $("btnDrillNo").onclick = () => drillNext(true);
@@ -4485,6 +4971,57 @@ voter, 选民"></textarea>
         startDrill(drillMiss.slice());
       };
     }
+
+    // 随身听
+    if ($("btnListenClose")) $("btnListenClose").onclick = () => stopListen(false);
+    if ($("btnListenPlay")) $("btnListenPlay").onclick = listenToggle;
+    if ($("btnListenPrev")) $("btnListenPrev").onclick = () => listenMove(-1);
+    if ($("btnListenNext")) $("btnListenNext").onclick = () => listenMove(1);
+
+    // 听写
+    if ($("btnDictClose")) $("btnDictClose").onclick = closeDict;
+    if ($("btnDictExit")) $("btnDictExit").onclick = closeDict;
+    if ($("btnDictAgain")) {
+      $("btnDictAgain").onclick = () => {
+        if (!dictMiss.length) { toast("这一轮全写对了"); return; }
+        startDict(dictMiss.slice());
+      };
+    }
+    if ($("btnDictCheck")) $("btnDictCheck").onclick = dictCheck;
+    if ($("btnDictShow")) $("btnDictShow").onclick = dictShow;
+    if ($("btnDictSkip")) $("btnDictSkip").onclick = dictSkip;
+    if ($("btnDictPlay")) $("btnDictPlay").onclick = () => { const w = dictList[dictIdx]; if (w) speak(w.en, true); };
+    if ($("dictInput")) {
+      $("dictInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); dictCheck(); }
+      });
+    }
+
+    // 随手拼
+    if ($("btnSpellClose")) $("btnSpellClose").onclick = closeSpell;
+    if ($("btnSpellExit")) $("btnSpellExit").onclick = closeSpell;
+    if ($("btnSpellAgain")) {
+      $("btnSpellAgain").onclick = () => {
+        if (!spellMiss.length) { toast("这一轮全拼对了"); return; }
+        startSpell(spellMiss.slice());
+      };
+    }
+    if ($("btnSpellBack")) $("btnSpellBack").onclick = spellBack;
+    if ($("btnSpellSkip")) $("btnSpellSkip").onclick = spellSkip;
+    if ($("btnSpellCheck")) $("btnSpellCheck").onclick = spellCheck;
+    if ($("spellTiles")) {
+      $("spellTiles").onclick = (ev) => {
+        const t = ev.target.closest ? ev.target.closest(".spell-tile") : null;
+        if (!t) return;
+        spellTap(Number(t.dataset.i));
+      };
+    }
+
+    // 导出
+    if ($("btnExportClose")) $("btnExportClose").onclick = () => $("exportBox").classList.remove("show");
+    if ($("btnExportCopy")) $("btnExportCopy").onclick = exportCopy;
+    if ($("btnExportSave")) $("btnExportSave").onclick = exportSave;
+
     const ta = $("wordInput");
     if (ta) {
       ta.ondblclick = (e) => { e.preventDefault(); openWbFull(); };
