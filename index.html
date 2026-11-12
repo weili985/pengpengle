@@ -1141,7 +1141,20 @@ voter, 选民"></textarea>
         <span class="setting-label">口音</span>
         <select class="setting-select" id="selAccent">
           <option value="en-US">美式 en-US</option>
-          <option value="en-GB">英式 en-GB</option>
+          <option value="en-GB">英式（牛津腔）en-GB</option>
+          <option value="en-AU">澳洲 en-AU</option>
+          <option value="en-CA">加拿大 en-CA</option>
+          <option value="en-IE">爱尔兰 en-IE</option>
+          <option value="en-NZ">新西兰 en-NZ</option>
+          <option value="en-ZA">南非 en-ZA</option>
+          <option value="en-IN">印度 en-IN</option>
+          <option value="en-SG">新加坡 en-SG</option>
+        </select>
+      </div>
+      <div class="select-row" id="voiceRow" style="display:none">
+        <span class="setting-label">朗读人</span>
+        <select class="setting-select" id="selVoice">
+          <option value="">自动（按口音）</option>
         </select>
       </div>
       <div class="setting-label-row">
@@ -1900,6 +1913,7 @@ voter, 选民"></textarea>
     winSound: true,
     autoRead: true,
     accent: "en-US",
+    voiceName: "",      // 具体朗读人，空 = 按口音自动挑
     rate: 0.7,
     clickStyle: "drop",
     successStyle: "stardust",
@@ -2342,12 +2356,54 @@ voter, 选民"></textarea>
     }
   }
 
+  // 本机有哪些英文朗读人（网页走浏览器，APK 走壳里的 AndroidTTS）
+  function availableVoices() {
+    try {
+      const all = speechSynthesis.getVoices() || [];
+      return all.filter(v => !v.lang || /^en/i.test(String(v.lang)));
+    } catch (e) { return []; }
+  }
+
+  function voiceByName(name) {
+    if (!name) return null;
+    return availableVoices().find(v => v.name === name) || null;
+  }
+
+  // 刷新「朗读人」下拉：按语言分组排序，本机的在前
+  function refreshVoiceOptions() {
+    const sel = $("selVoice");
+    if (!sel) return;
+    const vs = availableVoices().slice().sort((a, b) => {
+      const la = String(a.lang || ""), lb = String(b.lang || "");
+      if (la !== lb) return la < lb ? -1 : 1;
+      return String(a.name) < String(b.name) ? -1 : 1;
+    });
+    const keep = sel.value || setting.voiceName || "";
+    const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+    sel.innerHTML = '<option value="">自动（按口音）</option>' + vs.map(v =>
+      '<option value="' + esc(v.name) + '">' + esc(v.name) + (v.lang ? " · " + esc(v.lang) : "") + '</option>').join("");
+    sel.value = vs.some(v => v.name === keep) ? keep : "";
+    if ($("voiceRow")) $("voiceRow").style.display = vs.length ? "" : "none";
+  }
+
   function ttsSpeak(text) {
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = setting.accent;
     utt.rate = setting.rate;
+    // 选了具体朗读人：就用它，口音跟着它的语言走；没选则按口音自动挑
+    const v = voiceByName(setting.voiceName);
+    if (v) {
+      utt.voice = v;
+      if (v.lang) utt.lang = v.lang;
+    }
     speechSynthesis.speak(utt);
   }
+
+  // 朗读人列表是异步来的：能监听就监听
+  try {
+    if (speechSynthesis.addEventListener) speechSynthesis.addEventListener("voiceschanged", refreshVoiceOptions);
+    else speechSynthesis.onvoiceschanged = refreshVoiceOptions;
+  } catch (e) {}
 
   /* ---------- 我的声音：把每个词的朗读换成自己的录音 ---------- */
   const VDB_NAME = "pengpengle_voice";
@@ -2950,6 +3006,7 @@ voter, 选民"></textarea>
     $("selSuccessStyle").value = setting.successStyle;
     $("selFailStyle").value = setting.failStyle;
     $("selWinStyle").value = setting.winStyle;
+    refreshVoiceOptions();
   }
 
   function saveSettingFromUI() {
@@ -2961,6 +3018,7 @@ voter, 选民"></textarea>
     setting.autoRead = $("chkAutoRead").checked;
     if ($("chkReadSwitch")) $("chkReadSwitch").checked = setting.autoRead;
     setting.accent = $("selAccent").value;
+    if ($("selVoice")) setting.voiceName = $("selVoice").value;
     setting.rate = Number($("rateSlider").value);
     setting.clickStyle = $("selClickStyle").value;
     setting.successStyle = $("selSuccessStyle").value;
@@ -2977,6 +3035,7 @@ voter, 选民"></textarea>
       failStyle: $("selFailStyle").value,
       winStyle: $("selWinStyle").value,
       accent: $("selAccent").value,
+      voiceName: $("selVoice") ? $("selVoice").value : "",
       rate: Number($("rateSlider").value)
     }
   }
@@ -3403,6 +3462,8 @@ voter, 选民"></textarea>
       const utt = new SpeechSynthesisUtterance("welcome");
       utt.lang = ui.accent;
       utt.rate = ui.rate;
+      const v = voiceByName(ui.voiceName);
+      if (v) { utt.voice = v; if (v.lang) utt.lang = v.lang; }
       speechSynthesis.speak(utt);
     };
 
