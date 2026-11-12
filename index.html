@@ -1098,6 +1098,132 @@
     }
   }
 
+  /* ===== 全屏看词表（双击词库里那块粘贴板打开） ===== */
+  .wbfull {
+    position: fixed;
+    inset: 0;
+    z-index: 250;
+    background: #0c1e15;
+    display: none;
+    flex-direction: column;
+  }
+  .wbfull.show { display: flex; }
+  .wbfull-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid rgba(233, 180, 76, 0.35);
+  }
+  .wbfull-title {
+    color: #e9b44c;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .wbfull-close {
+    flex: none;
+    background: transparent;
+    border: 1px solid rgba(233, 180, 76, 0.55);
+    color: #cfe3d9;
+    border-radius: 10px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .wbfull-list {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 14px 108px;
+  }
+  .wbfull-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 13px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 11px;
+  }
+  .wbfull-row .wf-en { color: #d7c4ff; font-weight: 700; font-size: 16px; }
+  .wbfull-row .wf-cn { color: #cfe3d9; font-size: 14px; text-align: right; }
+  .wbfull-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, rgba(12, 30, 21, 0), rgba(12, 30, 21, 0.94) 34%);
+  }
+  .wbfull-bar .btn { height: 48px; font-size: 15px; }
+  .wbfull-bar .btn-ear { flex: 0 0 68px; font-size: 24px; padding: 0; }
+
+  /* ===== 沉浸式刷题（翻卡自测，全屏一次一个词） ===== */
+  .drill {
+    position: fixed;
+    inset: 0;
+    z-index: 260;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 50% 28%, #15372a 0%, #07140f 72%);
+  }
+  .drill.show { display: flex; }
+  .drill-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    color: #9fb8ab;
+    font-size: 13px;
+  }
+  .drill-word {
+    font-size: 40px;
+    font-weight: 800;
+    color: #e6d7ff;
+    text-align: center;
+    padding: 0 22px;
+    word-break: break-word;
+    line-height: 1.2;
+  }
+  .drill-cn {
+    margin-top: 20px;
+    font-size: 22px;
+    color: #ffd68a;
+    text-align: center;
+    min-height: 30px;
+    padding: 0 22px;
+  }
+  .drill-hint {
+    margin-top: 16px;
+    color: #8fa89c;
+    font-size: 13px;
+  }
+  .drill-btns {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    gap: 8px;
+    padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+  }
+  .drill-btns .btn { height: 48px; font-size: 14px; }
+  #btnDrillNo { background: #4a2323; border-color: #b4574f; }
+  #btnDrillYes { background: #2f6b4f; border-color: #e9b44c; }
+  .drill-end { display: none; text-align: center; width: 100%; }
+  .drill-end.show { display: block; }
+  .drill-end .btn-row { margin-top: 26px; padding: 0 22px; }
+
   /* ===== 窄屏兜底：底部三键不许溢出屏幕、标题不许折行、四个胶囊排成整齐一行 ===== */
   .bottom-panel .restart-row {
     width: 100%;
@@ -1234,12 +1360,54 @@ voter, 选民"></textarea>
       <button class="btn" id="btnCloseWord">关闭</button>
     </div>
     <input type="file" id="wordFile" accept=".txt,.csv,text/plain,text/csv" multiple style="display:none">
+    <div style="font-size:11px;color:#c8a24a;margin-top:6px;line-height:1.7;cursor:pointer;" id="wbFullHint">
+      双击上面这块粘贴板 → 全屏显示里面的单词 → 点 🎧 进入沉浸式刷题（点这行字也一样进去）
+    </div>
     <div style="font-size:11px;color:#aaa;margin-top:8px;line-height:1.7;">
       导入支持 .txt / .csv，一行一条，英文与中文用逗号、制表符或竖线分隔，自动识别 UTF-8 与 GBK 编码。
     </div>
     <div class="modal-actions" style="margin-top:8px;">
       <button class="btn" id="btnResetWord">恢复默认词库</button>
     </div>
+  </div>
+</div>
+
+<!-- 全屏看词表：双击词库粘贴板打开 -->
+<div class="wbfull" id="wbFull">
+  <div class="wbfull-head">
+    <div class="wbfull-title" id="wbFullTitle">粘贴板里的单词</div>
+    <button class="wbfull-close" id="btnWbFullClose">关闭</button>
+  </div>
+  <div class="wbfull-list" id="wbFullList"></div>
+  <div class="wbfull-bar">
+    <button class="btn btn-ear" id="btnWbEar" title="戴耳机进入沉浸式刷题">🎧</button>
+    <button class="btn" id="btnWbDrill">开始刷题（翻卡）</button>
+  </div>
+</div>
+
+<!-- 沉浸式刷题：全屏一次一个词 -->
+<div class="drill" id="drillBox">
+  <div class="drill-top">
+    <span id="drillProg">1/1</span>
+    <button class="wbfull-close" id="btnDrillClose">退出</button>
+  </div>
+  <div id="drillMain">
+    <div class="drill-word" id="drillWord">word</div>
+    <div class="drill-cn" id="drillCn"></div>
+    <div class="drill-hint" id="drillHint">点一下屏幕看中文</div>
+  </div>
+  <div class="drill-end" id="drillEnd">
+    <div class="drill-word">这一轮完成</div>
+    <div class="drill-cn" id="drillEndText"></div>
+    <div class="btn-row">
+      <button class="btn" id="btnDrillAgain">再刷没记住的</button>
+      <button class="btn" id="btnDrillExit">结束</button>
+    </div>
+  </div>
+  <div class="drill-btns" id="drillBtns">
+    <button class="btn" id="btnDrillPrev">◀ 上一个</button>
+    <button class="btn" id="btnDrillNo">没记住</button>
+    <button class="btn" id="btnDrillYes">记住了</button>
   </div>
 </div>
 
@@ -2005,16 +2173,35 @@ voter, 选民"></textarea>
       </div>`).join("");
     if ($("wbListTitle")) {
       const cnt = wbList.length;
-      $("wbListTitle").innerText = cnt
-        ? "选择要练的词库（共 " + (cnt + 1) + " 份，点一下直接开练）"
-        : "选择要练的词库（点一下直接开练；导入多个文件后会都列在这里）";
+      const cur = wbCurName();
+      $("wbListTitle").innerText = "正在练「" + cur + "」" + wordbook.length + " 词"
+        + (cnt ? "；点下面任一行就切过去练那份（共 " + (cnt + 1) + " 份）" : "；导入多个文件后会都列在这里");
     }
+  }
+
+  // 开机时让"正在练的词库"与高亮的那一行严格对上：以存下来的词库名为准
+  function syncCurrentWordbook() {
+    const cur = wbCurName();
+    if (cur === "默认词库" || cur === "手动编辑") return;   // 这两种直接用本地存着的词
+    const it = wbList.find(x => x.name === cur);
+    if (it && it.words && it.words.length) {
+      wordbook = it.words.map(w => ({ en: w.en, cn: w.cn }));
+      saveWordbook();
+      return;
+    }
+    // 名字对不上（那份被删了）→ 落回默认词库，免得高亮和牌面不一致
+    wordbook = DEFAULT_WORDBOOK.map(w => ({ ...w }));
+    saveWordbook();
+    try { localStorage.setItem(WBC_KEY, "默认词库"); } catch (e) {}
   }
 
   function useWordbook(name, list) {
     wordbook = list.map(w => ({ en: w.en, cn: w.cn }));
     saveWordbook();
     try { localStorage.setItem(WBC_KEY, name); } catch (e) {}
+    // 切词库必须真的用这份词开练：先把"生词本练习"的临时词收掉，否则牌面还是旧的那批
+    practiceWords = null;
+    pairsBeforePractice = null;
     if (wordbook.length >= 4 && totalPairs < 4) totalPairs = 4;
     $("wordbookModal").classList.remove("show");
     refreshPairChips();
@@ -2620,7 +2807,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.8.9");
+    bits.push("版本 v1.9.0");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -3117,8 +3304,8 @@ voter, 选民"></textarea>
 
   let lastVoiceRoute = "";
 
-  async function speak(text) {
-    if (!setting.autoRead) {
+  async function speak(text, force) {
+    if (!setting.autoRead && !force) {
       lastVoiceRoute = "读词开关关着，没读";
       renderTtsDiag();
       return;
@@ -3706,7 +3893,8 @@ voter, 选民"></textarea>
     }
     if ($("nbTip")) {
       $("nbTip").innerText = "当前「" + g.name + "」" + g.words.length + " 个词；共 " + nbGroups.length + " 本、合计 " + nbTotal() + " 个词，只存在这台设备上。"
-        + "点上面任意一本书名 = 选中这一本（面板不关）；再按下面那行「练…」的按钮才开始练（至少 2 个词）；点英文卡再点五角星 = 收进当前这本；"
+        + "点上面任意一本书名 = 选中这一本（面板不关）；再按下面那行「练…」的按钮才开始练（至少 2 个词）；"
+        + "★按钮只负责打开这个面板，不会再把词塞进哪一本；"
         + "双击没收录过的卡片 = 弹出来让你挑收进哪一本；已经收进去的词双击没有任何反应。";
     }
     if ($("btnNbPractice")) {
@@ -3751,17 +3939,8 @@ voter, 选民"></textarea>
       $("btnStar").onclick = () => {
         initAudio();
         if (setting.clickSound) playClickSound(setting.clickStyle);
-        if (starPick !== null) {
-          const c = cards[starPick];
-          if (c && !c.disappear) {
-            // 建了多本就让你挑；只有一本就直接收，少一步
-            if (nbGroups.length >= 2) { openNbPick(c); return; }
-            addToNotebook(c.text, c.pair);
-            starPick = null;
-            renderBoard();
-            return;
-          }
-        }
+        // 点「生词本」永远只是打开生词本面板，不再顺带弹"加到哪本"
+        // 要收词就双击卡片（双击才会弹选本面板）
         openNotebook();
       };
     }
@@ -4110,10 +4289,22 @@ voter, 选民"></textarea>
         const del = e.target.closest("[data-del]");
         if (del) {
           const id = del.dataset.del;
+          const gone = wbList.find(x => x.id === id);
           wbList = wbList.filter(x => x.id !== id);
           saveWbList();
+          // 删掉的正好是正在练的那份 → 落回默认词库，免得牌面还是这份的词
+          if (gone && wbCurName() === gone.name) {
+            wordbook = DEFAULT_WORDBOOK.map(w => ({ ...w }));
+            saveWordbook();
+            practiceWords = null;
+            try { localStorage.setItem(WBC_KEY, "默认词库"); } catch (e) {}
+            refreshPairChips();
+            startGame();
+            toast("删掉了正在练的「" + gone.name + "」，已切回默认词库");
+          } else {
+            toast("已删掉这份导入的词库");
+          }
           renderWbList();
-          toast("已删掉这份导入的词库");
           return;
         }
         const row = e.target.closest(".wb-row");
@@ -4191,9 +4382,128 @@ voter, 选民"></textarea>
     };
   }
 
+  /* ---------- 全屏看词表 + 沉浸式翻卡刷题 ---------------------------- */
+  let wbFullWords = [];
+  let drillWords = [], drillIdx = 0, drillRevealed = false, drillMiss = [];
+
+  function escHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  // 双击词库里那块粘贴板：把里面的词条摊成整屏清单
+  function openWbFull() {
+    const ta = $("wordInput");
+    const parsed = parseWordbookText(ta ? ta.value : "");
+    wbFullWords = parsed.list;
+    if (!wbFullWords.length) { toast("粘贴板里还没有词条：一行一条「英文, 中文」"); return; }
+    if ($("wbFullTitle")) $("wbFullTitle").innerText = "粘贴板里的 " + wbFullWords.length + " 个词";
+    if ($("wbFullList")) {
+      $("wbFullList").innerHTML = wbFullWords.map(w =>
+        '<div class="wbfull-row"><span class="wf-en">' + escHtml(w.en) +
+        '</span><span class="wf-cn">' + escHtml(w.cn) + '</span></div>').join("");
+    }
+    $("wbFull").classList.add("show");
+  }
+
+  function closeWbFull() { if ($("wbFull")) $("wbFull").classList.remove("show"); }
+
+  function startDrill(list) {
+    drillWords = (list || wbFullWords).map(w => ({ en: w.en, cn: w.cn }));
+    if (!drillWords.length) { toast("这份词表是空的"); return; }
+    drillIdx = 0; drillMiss = [];
+    $("drillMain").style.display = "block";
+    $("drillBtns").style.display = "flex";
+    $("drillEnd").classList.remove("show");
+    $("drillBox").classList.add("show");
+    renderDrill();
+  }
+
+  function renderDrill() {
+    const w = drillWords[drillIdx];
+    if (!w) return;
+    drillRevealed = false;
+    $("drillProg").innerText = (drillIdx + 1) + "/" + drillWords.length;
+    $("drillWord").innerText = w.en;
+    $("drillCn").innerText = "";
+    $("drillHint").innerText = "点一下屏幕看中文";
+    initAudio();
+    speak(w.en, true);            // 刷题时不管读词开关，一律读一遍
+  }
+
+  function revealDrill() {
+    const w = drillWords[drillIdx];
+    if (!w || drillRevealed) return;
+    drillRevealed = true;
+    $("drillCn").innerText = w.cn;
+    $("drillHint").innerText = "认得出就点「记住了」，不认识点「没记住」";
+  }
+
+  function drillNext(miss) {
+    if (!drillWords[drillIdx]) return;
+    if (miss) drillMiss.push(drillWords[drillIdx]);
+    drillIdx++;
+    if (drillIdx >= drillWords.length) { finishDrill(); return; }
+    renderDrill();
+  }
+
+  function finishDrill() {
+    $("drillMain").style.display = "none";
+    $("drillBtns").style.display = "none";
+    $("drillEnd").classList.add("show");
+    $("drillEndText").innerText = "共 " + drillWords.length + " 个词，没记住 " + drillMiss.length + " 个";
+  }
+
+  function closeDrill() {
+    if ($("drillBox")) $("drillBox").classList.remove("show");
+    drillWords = []; drillMiss = []; drillIdx = 0;
+  }
+
+  function bindWbFullEvents() {
+    if ($("btnWbFullClose")) $("btnWbFullClose").onclick = closeWbFull;
+    if ($("wbFullHint")) $("wbFullHint").onclick = openWbFull;   // 手机上双击不灵时的备用入口
+    if ($("btnWbEar")) $("btnWbEar").onclick = () => { initAudio(); startDrill(wbFullWords); };
+    if ($("btnWbDrill")) $("btnWbDrill").onclick = () => { initAudio(); startDrill(wbFullWords); };
+    if ($("wbFullList")) {
+      $("wbFullList").onclick = (ev) => {
+        const row = ev.target.closest ? ev.target.closest(".wbfull-row") : null;
+        if (!row) return;
+        const en = row.querySelector(".wf-en");
+        if (en) { initAudio(); speak(en.innerText, true); }
+      };
+    }
+    if ($("drillMain")) $("drillMain").onclick = revealDrill;
+    if ($("btnDrillPrev")) $("btnDrillPrev").onclick = () => { if (drillIdx > 0) { drillIdx--; renderDrill(); } };
+    if ($("btnDrillNo")) $("btnDrillNo").onclick = () => drillNext(true);
+    if ($("btnDrillYes")) $("btnDrillYes").onclick = () => drillNext(false);
+    if ($("btnDrillClose")) $("btnDrillClose").onclick = closeDrill;
+    if ($("btnDrillExit")) $("btnDrillExit").onclick = closeDrill;
+    if ($("btnDrillAgain")) {
+      $("btnDrillAgain").onclick = () => {
+        if (!drillMiss.length) { toast("这一轮全记住了，没有要重刷的"); return; }
+        startDrill(drillMiss.slice());
+      };
+    }
+    const ta = $("wordInput");
+    if (ta) {
+      ta.ondblclick = (e) => { e.preventDefault(); openWbFull(); };
+      // 手机上 WebView 不一定给 dblclick：自己数两次抬手
+      let lastUp = 0;
+      ta.addEventListener("pointerup", (e) => {
+        if (e.pointerType === "mouse") return;
+        const t = Date.now();
+        if (t - lastUp < 430) { lastUp = 0; openWbFull(); return; }
+        lastUp = t;
+      });
+    }
+  }
+
   loadWbList();
+  syncCurrentWordbook();
   bindEvents();
   bindStarEvents();
+  bindWbFullEvents();
   loadSettingUI();
   refreshPairChips();
   startGame();
