@@ -932,11 +932,16 @@
     margin-bottom: 8px;
   }
 
-  .btn-small.nb-prac {
-    background: #2f6b4f;
-    color: #fff;
-    border-color: #e9b44c;
+  .nb-prac-row {
+    margin: 0 0 10px;
+  }
+  .nb-prac-row .btn {
+    width: 100%;
+    height: 42px;
+    font-size: 15px;
     font-weight: 700;
+    background: #2f6b4f;
+    border-color: #e9b44c;
   }
   .nb-name-input {
     flex: 1;
@@ -1363,7 +1368,9 @@ voter, 选民"></textarea>
       <button class="btn-small" id="btnNbNew">新建本</button>
       <button class="btn-small" id="btnNbRename">改名</button>
       <button class="btn-small" id="btnNbDel">删本</button>
-      <button class="btn-small nb-prac" id="btnNbPractice">练这本</button>
+    </div>
+    <div class="nb-prac-row">
+      <button class="btn" id="btnNbPractice">练这本的单词</button>
     </div>
     <div class="nb-tip" id="nbTip"></div>
     <div class="nb-list" id="nbList"></div>
@@ -2506,7 +2513,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.8.7");
+    bits.push("版本 v1.8.8");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -3592,12 +3599,12 @@ voter, 选民"></textarea>
     }
     if ($("nbTip")) {
       $("nbTip").innerText = "当前「" + g.name + "」" + g.words.length + " 个词；共 " + nbGroups.length + " 本、合计 " + nbTotal() + " 个词，只存在这台设备上。"
-        + "点上面任意一本书名 = 直接用那本开练（至少 2 个词）；点英文卡再点五角星 = 收进当前这本；"
+        + "点上面任意一本书名 = 选中这一本（面板不关）；再按下面那行「练…」的按钮才开始练（至少 2 个词）；点英文卡再点五角星 = 收进当前这本；"
         + "双击没收录过的卡片 = 弹出来让你挑收进哪一本；已经收进去的词双击没有任何反应。";
     }
     if ($("btnNbPractice")) {
-      const nm = g.name.length > 4 ? g.name.slice(0, 4) + "…" : g.name;
-      $("btnNbPractice").innerText = (practiceWords ? "重开" : "练") + "「" + nm + "」";
+      const nm = g.name.length > 5 ? g.name.slice(0, 5) + "…" : g.name;
+      $("btnNbPractice").innerText = "练「" + nm + "」的 " + g.words.length + " 个词";
     }
     if ($("btnNbExit")) $("btnNbExit").style.display = practiceWords ? "" : "none";
     if ($("nbNameInput")) $("nbNameInput").value = g.name;
@@ -3664,16 +3671,9 @@ voter, 选民"></textarea>
         const t = e.target.closest(".nb-tab");
         if (!t) return;
         const gi = Number(t.dataset.idx) || 0;
-        if (gi === nbCurrent && practiceWords) {
-          // 正在用这本练，再点一下就是重开一局
-          practiceNotebook();
-          return;
-        }
         nbCurrent = gi;
         saveNotebook();
-        renderNotebookList();
-        initAudio();
-        practiceNotebook();          // 点哪本就用哪本开练
+        renderNotebookList();        // 只换当前本，不自动开练，面板留着
       };
     }
     if ($("btnNbNew")) {
