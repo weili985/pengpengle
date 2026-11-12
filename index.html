@@ -920,6 +920,61 @@
     color: #fff;
   }
 
+  .wb-list-title {
+    font-size: 12px;
+    color: #e9b44c;
+    margin: 0 0 6px;
+  }
+  .wb-text-title {
+    font-size: 12px;
+    color: #8fb9a2;
+    margin: 12px 0 6px;
+  }
+  .wb-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 4px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .wb-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+  }
+  .wb-row.on {
+    border-color: #e9b44c;
+    background: rgba(233, 180, 76, 0.14);
+  }
+  .wb-row .wb-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .wb-row .wb-num {
+    font-size: 11px;
+    color: #8fb9a2;
+  }
+  .wb-row .wb-del {
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: transparent;
+    color: #ffb3b3;
+    font-size: 11px;
+    font-family: inherit;
+  }
   .nb-tab-num {
     font-size: 11px;
     opacity: 0.85;
@@ -1164,6 +1219,9 @@
 <div class="modal-mask" id="wordbookModal">
   <div class="modal">
     <h3>词库管理</h3>
+    <div class="wb-list-title" id="wbListTitle">选择要练的词库（点一下直接开练）</div>
+    <div class="wb-list" id="wbList"></div>
+    <div class="wb-text-title">也可以在这里粘贴/编辑词条</div>
     <textarea id="wordInput" style="width:100%;min-height:140px;padding:10px;border-radius:10px;border:1px solid var(--border-gold);background:#153024;color:#fff;resize:vertical;" placeholder="nominate, 提名
 ballot, 选票
 rally, 集会
@@ -1175,7 +1233,7 @@ voter, 选民"></textarea>
       <button class="btn" id="btnLoadWord">加载词库</button>
       <button class="btn" id="btnCloseWord">关闭</button>
     </div>
-    <input type="file" id="wordFile" accept=".txt,.csv,text/plain,text/csv" style="display:none">
+    <input type="file" id="wordFile" accept=".txt,.csv,text/plain,text/csv" multiple style="display:none">
     <div style="font-size:11px;color:#aaa;margin-top:8px;line-height:1.7;">
       导入支持 .txt / .csv，一行一条，英文与中文用逗号、制表符或竖线分隔，自动识别 UTF-8 与 GBK 编码。
     </div>
@@ -1915,6 +1973,55 @@ voter, 选民"></textarea>
   })();
 
   // 一行一条：英文, 中文（逗号/顿号/制表符/竖线/分号/空格都能分隔）
+  // ---------- 导入过的词库：一条一个，点一下就用那份开练 ----------
+  const WBL_KEY = "pengpengle_wblist";
+  const WBC_KEY = "pengpengle_wbcur";
+  let wbList = [];
+
+  function loadWbList() {
+    try { wbList = JSON.parse(localStorage.getItem(WBL_KEY) || "[]") || []; } catch (e) { wbList = []; }
+    if (!Array.isArray(wbList)) wbList = [];
+  }
+
+  function saveWbList() {
+    try { localStorage.setItem(WBL_KEY, JSON.stringify(wbList)); } catch (e) {}
+  }
+
+  function wbCurName() {
+    try { return localStorage.getItem(WBC_KEY) || "默认词库"; } catch (e) { return "默认词库"; }
+  }
+
+  function renderWbList() {
+    const box = $("wbList");
+    if (!box) return;
+    const cur = wbCurName();
+    const rows = [{ id: "__default__", name: "默认词库", count: DEFAULT_WORDBOOK.length }]
+      .concat(wbList.map(x => ({ id: x.id, name: x.name, count: x.words.length })));
+    box.innerHTML = rows.map(r => `
+      <div class="wb-row${r.name === cur ? " on" : ""}" data-id="${r.id}">
+        <span class="wb-name">${r.name}</span>
+        <span class="wb-num">${r.count} 词</span>
+        ${r.id === "__default__" ? "" : '<button class="wb-del" data-del="' + r.id + '">删除</button>'}
+      </div>`).join("");
+    if ($("wbListTitle")) {
+      const cnt = wbList.length;
+      $("wbListTitle").innerText = cnt
+        ? "选择要练的词库（共 " + (cnt + 1) + " 份，点一下直接开练）"
+        : "选择要练的词库（点一下直接开练；导入多个文件后会都列在这里）";
+    }
+  }
+
+  function useWordbook(name, list) {
+    wordbook = list.map(w => ({ en: w.en, cn: w.cn }));
+    saveWordbook();
+    try { localStorage.setItem(WBC_KEY, name); } catch (e) {}
+    if (wordbook.length >= 4 && totalPairs < 4) totalPairs = 4;
+    $("wordbookModal").classList.remove("show");
+    refreshPairChips();
+    startGame();
+    toast("已切到词库「" + name + "」（" + wordbook.length + " 词）");
+  }
+
   function parseWordbookText(text) {
     const list = [];
     let skipped = 0;
@@ -2513,7 +2620,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.8.8");
+    bits.push("版本 v1.8.9");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -3049,8 +3156,8 @@ voter, 选民"></textarea>
   }
 
   function startGame() {
-    if (wordbook.length < 4) {
-      alert("词库至少需要 4 个单词");
+    if (wordbook.length < 2) {
+      toast("词库至少要有 2 个单词（一对牌）");
       return;
     }
     // 兜底：对数不能超过词库容量，否则永远凑不满，这局就是死局
@@ -3943,6 +4050,7 @@ voter, 选民"></textarea>
 
     $("btnWordbook").onclick = () => {
       $("wordInput").value = wordbook.map(w => `${w.en},${w.cn}`).join("\n");
+      renderWbList();
       $("wordbookModal").classList.add("show");
     };
 
@@ -3952,16 +4060,12 @@ voter, 选民"></textarea>
 
     $("btnLoadWord").onclick = () => {
       const parsed = parseWordbookText($("wordInput").value);
-      if (parsed.list.length < 4) {
-        alert("词库至少需要 4 个单词（每行写成「英文, 中文」）");
+      if (parsed.list.length < 2) {
+        toast("词库至少要有 2 个单词（每行写成「英文, 中文」）");
         return;
       }
-      wordbook = parsed.list;
-      saveWordbook();
-      $("wordbookModal").classList.remove("show");
-      refreshPairChips();
-      startGame();
-      alert("词库已加载：" + wordbook.length + " 条" + (parsed.skipped ? "，跳过 " + parsed.skipped + " 行" : ""));
+      useWordbook("手动编辑", parsed.list);
+      toast("词库已加载：" + wordbook.length + " 条" + (parsed.skipped ? "，跳过 " + parsed.skipped + " 行" : ""));
     };
 
     $("btnSetting").onclick = () => {
@@ -4001,50 +4105,93 @@ voter, 选民"></textarea>
       };
     });
 
+    if ($("wbList")) {
+      $("wbList").onclick = (e) => {
+        const del = e.target.closest("[data-del]");
+        if (del) {
+          const id = del.dataset.del;
+          wbList = wbList.filter(x => x.id !== id);
+          saveWbList();
+          renderWbList();
+          toast("已删掉这份导入的词库");
+          return;
+        }
+        const row = e.target.closest(".wb-row");
+        if (!row) return;
+        const id = row.dataset.id;
+        initAudio();
+        if (id === "__default__") { useWordbook("默认词库", DEFAULT_WORDBOOK); return; }
+        const it = wbList.find(x => x.id === id);
+        if (it) useWordbook(it.name, it.words);
+      };
+    }
+
     $("btnImportWord").onclick = () => $("wordFile").click();
 
     $("wordFile").onchange = (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const buf = reader.result;
-          let text = new TextDecoder("utf-8").decode(buf);
-          if (text.indexOf("\uFFFD") >= 0) {
-            try { text = new TextDecoder("gbk").decode(buf); } catch (err) {}
+      const files = e.target.files ? [...e.target.files] : [];
+      if (!files.length) return;
+      const results = [];
+      let done = 0;
+      files.forEach((file, fi) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const buf = reader.result;
+            let text = new TextDecoder("utf-8").decode(buf);
+            if (text.indexOf("\uFFFD") >= 0) {
+              try { text = new TextDecoder("gbk").decode(buf); } catch (err) {}
+            }
+            const parsed = parseWordbookText(text);
+            results[fi] = { name: file.name.replace(/\.(txt|csv)$/i, ""), list: parsed.list, skipped: parsed.skipped };
+          } catch (err) {
+            results[fi] = { name: file.name, list: [], skipped: 0, err: err.message };
           }
-          const parsed = parseWordbookText(text);
-          if (parsed.list.length < 4) {
-            alert("只解析到 " + parsed.list.length + " 条有效词条，至少需要 4 条。\n请确认每行写成「英文, 中文」。");
-            return;
-          }
-          wordbook = parsed.list;
-          saveWordbook();
-          $("wordInput").value = wordbook.map(w => `${w.en},${w.cn}`).join("\n");
-          refreshPairChips();
-          startGame();
-          alert("已导入 " + wordbook.length + " 条" + (parsed.skipped ? "，跳过 " + parsed.skipped + " 行" : ""));
-        } catch (err) {
-          alert("导入失败：" + err.message);
-        }
-      };
-      reader.onerror = () => alert("读取文件失败");
-      reader.readAsArrayBuffer(file);
+          done++;
+          if (done === files.length) finishImport(results);
+        };
+        reader.onerror = () => {
+          results[fi] = { name: file.name, list: [], skipped: 0, err: "读取失败" };
+          done++;
+          if (done === files.length) finishImport(results);
+        };
+        reader.readAsArrayBuffer(file);
+      });
       e.target.value = "";
     };
+
+    function finishImport(results) {
+      let added = 0, bad = 0, single = null;
+      results.forEach(r => {
+        if (!r.list || r.list.length < 2) { bad++; return; }
+        const name = r.name || ("词库" + (wbList.length + 1));
+        const old = wbList.findIndex(x => x.name === name);
+        const item = { id: "w" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: name, words: r.list };
+        if (old >= 0) { item.id = wbList[old].id; wbList[old] = item; } else { wbList.push(item); }
+        added++;
+        single = item;
+      });
+      saveWbList();
+      renderWbList();
+      if (!added) { toast("没解析到有效词条（至少 2 条，一行「英文, 中文」）"); return; }
+      if (added === 1 && single) { useWordbook(single.name, single.words); return; }
+      toast(bad ? ("导入了 " + added + " 份，有 " + bad + " 个文件没解析到词条") : ("导入了 " + added + " 份词库，点上面列表里的名字就能开练"));
+    }
 
     $("btnResetWord").onclick = () => {
       wordbook = DEFAULT_WORDBOOK.map(w => ({ ...w }));
       try { localStorage.removeItem(WB_KEY); } catch (e) {}
       try { localStorage.setItem(WB_DEFAULT_TAG, WB_DEFAULT_VER); } catch (e) {}
       $("wordInput").value = wordbook.map(w => `${w.en},${w.cn}`).join("\n");
+      try { localStorage.setItem(WBC_KEY, "默认词库"); } catch (e) {}
+      renderWbList();
       refreshPairChips();
       startGame();
-      alert("已恢复默认词库（" + wordbook.length + " 条）");
+      toast("已恢复默认词库（" + wordbook.length + " 条）");
     };
   }
 
+  loadWbList();
   bindEvents();
   bindStarEvents();
   loadSettingUI();
