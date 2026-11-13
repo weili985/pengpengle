@@ -1327,6 +1327,60 @@
   }
   .lang-chip.on { background: #e9b44c; border-color: #e9b44c; color: #10271d; }
   .lang-chip:active { opacity: 0.75; }
+
+  /* 随身听「播放设置」 */
+  .drill-top-r { display: flex; gap: 8px; }
+  .ls-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .ls-title h3 { margin: 0; }
+  .ls-modes { display: flex; gap: 8px; margin-bottom: 16px; }
+  .ls-mode {
+    flex: 1 1 0;
+    padding: 12px 6px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(233, 180, 76, 0.45);
+    background: rgba(26, 59, 43, 0.85);
+    color: #cfe0d6;
+    text-align: center;
+    line-height: 1.25;
+  }
+  .ls-mode-ico { font-size: 24px; display: block; margin-bottom: 4px; }
+  .ls-mode-name { display: block; font-size: 14px; font-weight: 800; }
+  .ls-mode-sub { display: block; font-size: 11px; color: #9fb8ab; margin-top: 4px; }
+  .ls-mode.on {
+    border-color: #e9b44c;
+    background: rgba(233, 180, 76, 0.16);
+  }
+  .ls-mode.on .ls-mode-name { color: #ffd68a; }
+  .ls-mode.off { opacity: 0.42; }
+  .ls-sec { margin-bottom: 16px; }
+  .ls-sec-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #e9dcc0;
+    margin-bottom: 8px;
+  }
+  .ls-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ls-chip {
+    flex: 1 1 0;
+    min-width: 68px;
+    height: 38px;
+    border-radius: 19px;
+    border: 1px solid rgba(233, 180, 76, 0.45);
+    background: rgba(26, 59, 43, 0.85);
+    color: #cfe0d6;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .ls-chip.on { background: #e9b44c; border-color: #e9b44c; color: #10271d; }
+  .ls-chip:active { opacity: 0.78; }
+  .ls-tip { font-size: 12px; color: #8fa89c; margin: 2px 0 14px; line-height: 1.5; }
+  /* 随身听是 .drill（z-index 260）盖在最上面，设置面板必须比它更高，否则看不见 */
+  #listenCfgModal { z-index: 300; }
   .drill-cn.big {
     margin-top: 0;
     font-size: 40px;
@@ -1535,7 +1589,10 @@ voter, 选民"></textarea>
 <div class="drill" id="listenBox">
   <div class="drill-top">
     <span id="listenProg">1/1</span>
-    <button class="wbfull-close" id="btnListenClose">退出</button>
+    <div class="drill-top-r">
+      <button class="wbfull-close" id="btnListenCfg">设置</button>
+      <button class="wbfull-close" id="btnListenClose">退出</button>
+    </div>
   </div>
   <div style="text-align:center;padding:0 20px;">
     <div class="drill-word" id="listenWord">word</div>
@@ -1550,6 +1607,52 @@ voter, 选民"></textarea>
     <button class="btn" id="btnListenPrev">◀ 上一个</button>
     <button class="btn" id="btnListenPlay">暂停</button>
     <button class="btn" id="btnListenNext">下一个 ▶</button>
+  </div>
+</div>
+
+<!-- 随身听·播放设置 -->
+<div class="modal-mask" id="listenCfgModal">
+  <div class="modal">
+    <div class="ls-title">
+      <h3>播放设置</h3>
+      <button class="modal-x" id="btnListenCfgClose" aria-label="关闭">✕</button>
+    </div>
+    <div class="ls-modes" id="lsModes">
+      <button class="ls-mode" data-mode="basic">
+        <span class="ls-mode-ico">🐣</span>
+        <span class="ls-mode-name">基础模式</span>
+        <span class="ls-mode-sub">单词 + 词义</span>
+      </button>
+      <button class="ls-mode off" data-mode="adv">
+        <span class="ls-mode-ico">🎓</span>
+        <span class="ls-mode-name">进阶模式</span>
+        <span class="ls-mode-sub">暂无例句</span>
+      </button>
+      <button class="ls-mode" data-mode="fast">
+        <span class="ls-mode-ico">🚀</span>
+        <span class="ls-mode-name">速刷模式</span>
+        <span class="ls-mode-sub">仅单词</span>
+      </button>
+    </div>
+    <div class="ls-sec">
+      <div class="ls-sec-label">单词播放次数</div>
+      <div class="ls-chips" id="lsTimes">
+        <button class="ls-chip" data-times="1">1 次</button>
+        <button class="ls-chip" data-times="2">2 次</button>
+        <button class="ls-chip" data-times="3">3 次</button>
+        <button class="ls-chip" data-times="0">无限</button>
+      </div>
+    </div>
+    <div class="ls-sec">
+      <div class="ls-sec-label">倍数</div>
+      <div class="ls-chips" id="lsRate">
+        <button class="ls-chip" data-rate="0.8">0.8</button>
+        <button class="ls-chip" data-rate="1.0">1.0</button>
+        <button class="ls-chip" data-rate="1.2">1.2</button>
+        <button class="ls-chip" data-rate="1.4">1.4</button>
+      </div>
+    </div>
+    <div class="ls-tip">倍数只影响随身听的朗读速度，不会改主界面「语速」滑杆。选「无限」会一直重复当前这个词，直到你点「下一个」。</div>
   </div>
 </div>
 
@@ -3084,7 +3187,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.7");
+    bits.push("版本 v1.10.8");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -3104,23 +3207,27 @@ voter, 选民"></textarea>
     if ($("ttsDiag")) $("ttsDiag").innerText = ttsStatusText();
   }
 
-  function ttsSpeak(text, tried) {
+  function ttsSpeak(text, tried, rate, lang) {
     // 壳里的朗读引擎刚起来时可能还没就绪，这时说一句是静音：等 0.7 秒再补一次，只补一次
     if (window.AndroidTTS && AndroidTTS.isReady && !AndroidTTS.isReady()) {
       if (!tried) {
-        setTimeout(() => { try { ttsSpeak(text, true); } catch (e) {} }, 700);
+        setTimeout(() => { try { ttsSpeak(text, true, rate, lang); } catch (e) {} }, 700);
       } else {
         toast("朗读引擎还没就绪：等几秒再点，或到系统设置里换一个 TTS 引擎");
       }
       return;
     }
-    lastVoiceRoute = "系统朗读（" + setting.accent + (setting.voiceName ? " / " + setting.voiceName : "") + "）";
+    const useRate = (rate && rate > 0) ? rate : setting.rate;
+    const useLang = lang || setting.accent;
+    // 读中文时不套用"英文朗读人"，否则会被说成四不像
+    const wantVoice = (lang && lang !== setting.accent) ? "" : setting.voiceName;
+    lastVoiceRoute = "系统朗读（" + useLang + (wantVoice ? " / " + wantVoice : "") + "）";
     renderTtsDiag();
     const utt = new SpeechSynthesisUtterance(text);
-    utt.lang = setting.accent;
-    utt.rate = setting.rate;
+    utt.lang = useLang;
+    utt.rate = useRate;
     // 选了具体朗读人：就用它，口音跟着它的语言走；没选则按口音自动挑
-    const v = voiceByName(setting.voiceName);
+    const v = wantVoice ? voiceByName(wantVoice) : null;
     if (v) {
       utt.voice = v;
       if (v.lang) utt.lang = v.lang;
@@ -3130,8 +3237,8 @@ voter, 选民"></textarea>
     } catch (e) {
       // 指定朗读人出错时退回"只按口音"，宁可听上去一般也不要没声音
       const plain = new SpeechSynthesisUtterance(text);
-      plain.lang = setting.accent;
-      plain.rate = setting.rate;
+      plain.lang = useLang;
+      plain.rate = useRate;
       try { speechSynthesis.speak(plain); } catch (e2) {}
     }
   }
@@ -3223,7 +3330,7 @@ voter, 选民"></textarea>
 
   // 播放一段录音，返回"播完"的 Promise（超时兜底，避免卡住读词流程）
   // 放自己录的音；返回 true=真的放出来了，false=没放成（调用方要退回系统朗读）
-  function playVoiceBlob(blob, maxMs) {
+  function playVoiceBlob(blob, maxMs, rate) {
     return new Promise(resolve => {
       let done = false, url = "", audible = false;
       const finish = (good) => {
@@ -3236,6 +3343,7 @@ voter, 选民"></textarea>
       try {
         url = URL.createObjectURL(blob);
         const a = new Audio(url);
+        if (rate && rate > 0) { try { a.playbackRate = rate; } catch (e) {} }
         a.onplaying = () => { audible = true; };
         a.onended = () => finish(true);
         a.onerror = () => finish(false);
@@ -3581,7 +3689,7 @@ voter, 选民"></textarea>
 
   let lastVoiceRoute = "";
 
-  async function speak(text, force) {
+  async function speak(text, force, rate) {
     if (!setting.autoRead && !force) {
       lastVoiceRoute = "读词开关关着，没读";
       renderTtsDiag();
@@ -3593,7 +3701,7 @@ voter, 选民"></textarea>
         if (!(await blobAudible(blob))) {
           lastVoiceRoute = "录音是空的，改用系统朗读";
         } else {
-          const played = await playVoiceBlob(blob);
+          const played = await playVoiceBlob(blob, undefined, rate);
           if (played) {
             lastVoiceRoute = "我的录音";
             renderTtsDiag();
@@ -3606,7 +3714,7 @@ voter, 选民"></textarea>
     } catch (e) {
       lastVoiceRoute = "录音库读不了，改用系统朗读";
     }
-    ttsSpeak(text);
+    ttsSpeak(text, false, rate);
   }
 
   function shuffle(arr) {
@@ -4794,6 +4902,118 @@ voter, 选民"></textarea>
 
   /* ---------- 随身听：一条条自动连播 ---------- */
   let listenList = [], listenIdx = 0, listenTimer = null, listenPlaying = false;
+  let listenSeqTok = 0;              // 每换一个词就 +1，作废旧的回调，防止两套计时器抢着往下走
+
+  /* ---------- 随身听：播放设置（模式 / 播放次数 / 倍数） ---------- */
+  const LISTEN_CFG_KEY = "pengpengle_listen_cfg";
+  const LISTEN_RATES = [0.8, 1.0, 1.2, 1.4];
+  const LISTEN_TIMES = [1, 2, 3, 0];   // 0 = 无限
+  let listenCfg = (function () {
+    let o = {};
+    try { o = JSON.parse(localStorage.getItem(LISTEN_CFG_KEY) || "{}") || {}; } catch (e) { o = {}; }
+    const savedRate = Number(o.rate);
+    return {
+      mode: (o.mode === "fast" || o.mode === "adv" || o.mode === "basic") ? (o.mode === "adv" ? "basic" : o.mode) : "basic",
+      times: LISTEN_TIMES.indexOf(Number(o.times)) >= 0 ? Number(o.times) : 1,
+      rate: LISTEN_RATES.indexOf(savedRate) >= 0 ? savedRate : 1.0
+    };
+  })();
+
+  function saveListenCfg() {
+    try { localStorage.setItem(LISTEN_CFG_KEY, JSON.stringify(listenCfg)); } catch (e) {}
+  }
+
+  function listenCfgModeName() {
+    if (listenCfg.mode === "fast") return "速刷";
+    return "基础";
+  }
+
+  function renderListenCfg() {
+    if ($("lsModes")) {
+      [...$("lsModes").querySelectorAll(".ls-mode")].forEach(b => {
+        const m = b.getAttribute("data-mode");
+        b.classList.toggle("on", m === listenCfg.mode);
+      });
+    }
+    if ($("lsTimes")) {
+      [...$("lsTimes").querySelectorAll(".ls-chip")].forEach(b => {
+        b.classList.toggle("on", Number(b.getAttribute("data-times")) === listenCfg.times);
+      });
+    }
+    if ($("lsRate")) {
+      [...$("lsRate").querySelectorAll(".ls-chip")].forEach(b => {
+        b.classList.toggle("on", Number(b.getAttribute("data-rate")) === listenCfg.rate);
+      });
+    }
+  }
+
+  function openListenCfg() {
+    renderListenCfg();
+    if ($("listenCfgModal")) $("listenCfgModal").classList.add("show");
+  }
+
+  function closeListenCfg() {
+    if ($("listenCfgModal")) $("listenCfgModal").classList.remove("show");
+  }
+
+  function setListenMode(m) {
+    if (m === "adv") { toast("进阶模式要例句，现在的词库只有单词和词义"); return; }
+    listenCfg.mode = (m === "fast") ? "fast" : "basic";
+    saveListenCfg(); renderListenCfg();
+    if ($("listenBox") && $("listenBox").classList.contains("show")) {
+      if (listenPlaying) { listenStep(); }            // 立刻按新设置重播当前词
+      else if ($("listenHint")) $("listenHint").innerText = listenHintText();
+    }
+  }
+
+  function setListenTimes(t) {
+    listenCfg.times = LISTEN_TIMES.indexOf(Number(t)) >= 0 ? Number(t) : 1;
+    saveListenCfg(); renderListenCfg();
+    if ($("listenBox") && $("listenBox").classList.contains("show")) {
+      if (listenPlaying) { listenStep(); }
+      else if ($("listenHint")) $("listenHint").innerText = listenHintText();
+    }
+  }
+
+  function setListenRate(r) {
+    listenCfg.rate = LISTEN_RATES.indexOf(Number(r)) >= 0 ? Number(r) : 1.0;
+    saveListenCfg(); renderListenCfg();
+    if ($("listenBox") && $("listenBox").classList.contains("show")) {
+      if (listenPlaying) { listenStep(); }
+      else if ($("listenHint")) $("listenHint").innerText = listenHintText();
+    }
+  }
+
+  function bindListenCfg() {
+    if ($("btnListenCfg")) $("btnListenCfg").onclick = () => { initAudio(); openListenCfg(); };
+    if ($("btnListenCfgClose")) $("btnListenCfgClose").onclick = closeListenCfg;
+    if ($("listenCfgModal")) {
+      $("listenCfgModal").addEventListener("click", (ev) => {
+        if (ev.target === $("listenCfgModal")) closeListenCfg();   // 点面板外面的空白
+      });
+    }
+    if ($("lsModes")) {
+      $("lsModes").addEventListener("click", (ev) => {
+        const b = ev.target.closest ? ev.target.closest(".ls-mode") : null;
+        if (!b) return;
+        setListenMode(b.getAttribute("data-mode"));
+      });
+    }
+    if ($("lsTimes")) {
+      $("lsTimes").addEventListener("click", (ev) => {
+        const b = ev.target.closest ? ev.target.closest(".ls-chip") : null;
+        if (!b) return;
+        setListenTimes(b.getAttribute("data-times"));
+      });
+    }
+    if ($("lsRate")) {
+      $("lsRate").addEventListener("click", (ev) => {
+        const b = ev.target.closest ? ev.target.closest(".ls-chip") : null;
+        if (!b) return;
+        setListenRate(b.getAttribute("data-rate"));
+      });
+    }
+  }
 
   /* ---------- 随身听：中/英 单独显示 ---------- */
   let langMode = (function () {
@@ -4804,9 +5024,10 @@ voter, 选民"></textarea>
   })();
 
   function listenHintText() {
-    if (langMode === "cn") return "只看中文，回想英文…自动连播中，点「暂停」停一下";
-    if (langMode === "en") return "只看英文，自动连播中…点「暂停」停一下";
-    return "自动连播中…点「暂停」可以停下来";
+    const tail = "（" + listenCfgModeName() + "·" + (listenCfg.times === 0 ? "无限次" : listenCfg.times + " 次") + "·" + listenCfg.rate + "×）";
+    if (langMode === "cn") return "只看中文，回想英文…点「暂停」停一下 " + tail;
+    if (langMode === "en") return "只看英文…点「暂停」停一下 " + tail;
+    return "自动连播中…点「暂停」可以停下来 " + tail;
   }
 
   function applyLangMode() {
@@ -4843,25 +5064,61 @@ voter, 选民"></textarea>
     if (!listenPlaying) return;
     const w = listenList[listenIdx];
     if (!w) { stopListen(true); return; }
+    const tok = ++listenSeqTok;                    // 作废旧的那套计时器
+    clearTimeout(listenTimer);
     $("listenProg").innerText = (listenIdx + 1) + "/" + listenList.length;
     $("listenWord").innerText = w.en;
-    $("listenCn").innerText = w.cn;
+    $("listenCn").innerText = w.cn || "";
     $("listenHint").innerText = listenHintText();
     initAudio();
-    speak(w.en, true);
-    clearTimeout(listenTimer);
-    listenTimer = setTimeout(() => {
-      if (!listenPlaying) return;
-      listenIdx++;
-      if (listenIdx >= listenList.length) { stopListen(true); return; }
-      listenStep();
-    }, 2600);
+
+    const rate = listenCfg.rate || 1.0;
+    const infinite = listenCfg.times === 0;
+    const times = infinite ? 1 : listenCfg.times;
+    const queue = [];
+    for (let i = 0; i < times; i++) queue.push({ t: w.en, kind: "en", r: rate });
+    if (listenCfg.mode !== "fast" && w.cn) queue.push({ t: w.cn, kind: "cn", r: rate });
+
+    const gap = Math.round(1050 / rate);            // 一句接一句的间隔，倍数越大越紧
+    let qi = 0;
+
+    const say = (item) => {
+      if (item.kind === "cn") ttsSpeak(item.t, false, item.r, "zh-CN");   // 中文用中文语音，不走"我的录音"
+      else speak(item.t, true, item.r);
+    };
+
+    const nextWord = () => {
+      clearTimeout(listenTimer);
+      listenTimer = setTimeout(() => {
+        if (!listenPlaying || tok !== listenSeqTok) return;
+        listenIdx++;
+        if (listenIdx >= listenList.length) { stopListen(true); return; }
+        listenStep();
+      }, Math.round(650 / rate));
+    };
+
+    const run = () => {
+      if (!listenPlaying || tok !== listenSeqTok) return;
+      if (qi >= queue.length) {
+        if (infinite) { qi = 0; }                   // 无限次：一直重复这个词，不往下走
+        else { nextWord(); return; }
+      }
+      say(queue[qi++]);
+      clearTimeout(listenTimer);
+      listenTimer = setTimeout(run, gap);
+    };
+    run();
   }
 
   function listenToggle() {
     listenPlaying = !listenPlaying;
     if ($("btnListenPlay")) $("btnListenPlay").innerText = listenPlaying ? "暂停" : "继续";
-    if (listenPlaying) listenStep(); else clearTimeout(listenTimer);
+    if (listenPlaying) {
+      listenStep();
+    } else {
+      listenSeqTok++;                               // 停：把还在排队的句子全部作废
+      clearTimeout(listenTimer);
+    }
   }
 
   function listenMove(d) {
@@ -4872,6 +5129,7 @@ voter, 选民"></textarea>
   }
 
   function stopListen(done) {
+    listenSeqTok++;
     clearTimeout(listenTimer); listenTimer = null; listenPlaying = false;
     if ($("listenBox")) $("listenBox").classList.remove("show");
     listenList = []; listenIdx = 0;
@@ -5210,6 +5468,7 @@ voter, 选民"></textarea>
   bindEvents();
   bindStarEvents();
   bindWbFullEvents();
+  bindListenCfg();
   applyLangMode();
   loadSettingUI();
   refreshPairChips();
