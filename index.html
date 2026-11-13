@@ -1372,6 +1372,35 @@
   }
   .mode-chip.on { background: #e9b44c; border-color: #e9b44c; color: #10271d; }
   .mode-chip:active { opacity: 0.75; }
+  .mode-chip { display: inline-flex; align-items: center; gap: 5px; }
+  .mc-arrow {
+    font-style: normal;
+    font-size: 10px;
+    line-height: 1;
+    opacity: 0.75;
+  }
+  .mode-chip.on .mc-arrow { opacity: 1; }
+  .listen-modes.open .mc-arrow { transform: rotate(180deg); }
+  .listen-cfg-inline {
+    position: absolute;
+    top: 100px;
+    left: 10px;
+    right: 10px;
+    max-width: 520px;
+    margin: 0 auto;
+    display: none;
+    z-index: 6;
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(233, 180, 76, 0.4);
+    background: rgba(16, 42, 31, 0.98);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+    max-height: 60vh;
+    overflow: auto;
+  }
+  .listen-cfg-inline.show { display: block; }
+  .listen-cfg-inline .ls-switch-card { margin-bottom: 12px; }
+  .listen-cfg-inline .ls-sec { margin-bottom: 10px; }
 
   /* 随身听「播放设置」 */
   .drill-top-r { display: flex; gap: 8px; }
@@ -1476,7 +1505,7 @@
   .blind-tip { display: none; font-size: 12px; color: #8fa89c; margin-top: -4px; }
   #listenBox.blind .blind-tip { display: block; }
   /* 随身听是 .drill（z-index 260）盖在最上面，设置面板必须比它更高，否则看不见 */
-  #listenCfgModal { z-index: 300; }
+
   .drill-cn.big {
     margin-top: 0;
     font-size: 40px;
@@ -1686,44 +1715,15 @@ voter, 选民"></textarea>
   <div class="drill-top">
     <span id="listenProg">1/1</span>
     <div class="drill-top-r">
-      <button class="wbfull-close eye-btn" id="btnListenEye" title="隐藏/显示释义" aria-label="隐藏或显示释义">
-        <svg class="eye-open" viewBox="0 0 24 24"><path d="M2 12s3.7-6.2 10-6.2 10 6.2 10 6.2-3.7 6.2-10 6.2S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg>
-        <svg class="eye-shut" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M2 12s3.7-6.2 10-6.2c1.6 0 3 .4 4.2 1"/><path d="M22 12s-3.7 6.2-10 6.2c-1.5 0-2.9-.4-4-1"/></svg>
-      </button>
-      <button class="wbfull-close" id="btnListenCfg">设置</button>
       <button class="wbfull-close" id="btnListenClose">退出</button>
     </div>
   </div>
   <div class="listen-modes" id="listenModes">
-    <button class="mode-chip" data-mode="basic">基础</button>
-    <button class="mode-chip" data-mode="adv">进阶</button>
-    <button class="mode-chip" data-mode="fast">速刷</button>
+    <button class="mode-chip" data-mode="basic">基础<i class="mc-arrow">▾</i></button>
+    <button class="mode-chip" data-mode="adv">进阶<i class="mc-arrow">▾</i></button>
+    <button class="mode-chip" data-mode="fast">速刷<i class="mc-arrow">▾</i></button>
   </div>
-  <div style="text-align:center;padding:0 20px;">
-    <div class="drill-word" id="listenWord">word</div>
-    <div class="drill-cn" id="listenCn"></div>
-    <div class="blind-tip" id="listenBlindTip">释义已隐藏 · 点右上的小眼睛显示，或点这里临时看一眼</div>
-    <div class="drill-ex" id="listenEx"></div>
-    <div class="drill-hint" id="listenHint">自动连播中…</div>
-  </div>
-  <div class="lang-row">
-    <button class="lang-chip" id="btnLangCn" data-lang="cn">中文</button>
-    <button class="lang-chip" id="btnLangEn" data-lang="en">英文</button>
-  </div>
-  <div class="drill-btns">
-    <button class="btn" id="btnListenPrev">◀ 上一个</button>
-    <button class="btn" id="btnListenPlay">暂停</button>
-    <button class="btn" id="btnListenNext">下一个 ▶</button>
-  </div>
-</div>
-
-<!-- 随身听·播放设置 -->
-<div class="modal-mask" id="listenCfgModal">
-  <div class="modal">
-    <div class="ls-title">
-      <h3>播放设置</h3>
-      <button class="modal-x" id="btnListenCfgClose" aria-label="关闭">✕</button>
-    </div>
+  <div class="listen-cfg-inline" id="listenCfgPanel">
     <div class="ls-switch-card">
       <div class="ls-sw"><span>单词拼读</span><button class="ls-toggle" data-k="spell"><i></i></button></div>
       <div class="ls-sw"><span>慢速重播例句</span><button class="ls-toggle" data-k="slowEx"><i></i></button></div>
@@ -1749,7 +1749,24 @@ voter, 选民"></textarea>
       </div>
     </div>
   </div>
+  <div style="text-align:center;padding:0 20px;">
+    <div class="drill-word" id="listenWord">word</div>
+    <div class="drill-cn" id="listenCn"></div>
+    <div class="drill-ex" id="listenEx"></div>
+    <div class="drill-hint" id="listenHint">自动连播中…</div>
+  </div>
+  <div class="lang-row">
+    <button class="lang-chip" id="btnLangCn" data-lang="cn">中文</button>
+    <button class="lang-chip" id="btnLangEn" data-lang="en">英文</button>
+  </div>
+  <div class="drill-btns">
+    <button class="btn" id="btnListenPrev">◀ 上一个</button>
+    <button class="btn" id="btnListenPlay">暂停</button>
+    <button class="btn" id="btnListenNext">下一个 ▶</button>
+  </div>
 </div>
+
+<!-- 随身听·听写占位 -->
 
 <!-- 听写 -->
 <div class="drill" id="dictBox">
@@ -3289,7 +3306,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.13");
+    bits.push("版本 v1.10.14");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -5104,7 +5121,7 @@ voter, 选民"></textarea>
         b.classList.toggle("on", Number(b.getAttribute("data-rate")) === listenCfg.rate);
       });
     }
-    document.querySelectorAll("#listenCfgModal .ls-toggle").forEach(t => {
+    document.querySelectorAll("#listenCfgPanel .ls-toggle").forEach(t => {
       const k = t.getAttribute("data-k");
       t.classList.toggle("on", !!listenCfg[k]);
     });
@@ -5122,11 +5139,18 @@ voter, 选民"></textarea>
 
   function openListenCfg() {
     renderListenCfg();
-    if ($("listenCfgModal")) $("listenCfgModal").classList.add("show");
+    if ($("listenCfgPanel")) $("listenCfgPanel").classList.add("show");
+    if ($("listenModes")) $("listenModes").classList.add("open");
   }
 
   function closeListenCfg() {
-    if ($("listenCfgModal")) $("listenCfgModal").classList.remove("show");
+    if ($("listenCfgPanel")) $("listenCfgPanel").classList.remove("show");
+    if ($("listenModes")) $("listenModes").classList.remove("open");
+  }
+
+  function toggleListenCfg() {
+    if ($("listenCfgPanel") && $("listenCfgPanel").classList.contains("show")) closeListenCfg();
+    else openListenCfg();
   }
 
   function setListenMode(m) {
@@ -5159,20 +5183,23 @@ voter, 选民"></textarea>
   }
 
   function bindListenCfg() {
-    if ($("btnListenCfg")) $("btnListenCfg").onclick = () => { initAudio(); openListenCfg(); };
-    if ($("btnListenCfgClose")) $("btnListenCfgClose").onclick = closeListenCfg;
-    if ($("listenCfgModal")) {
-      $("listenCfgModal").addEventListener("click", (ev) => {
-        if (ev.target === $("listenCfgModal")) closeListenCfg();   // 点面板外面的空白
-      });
-    }
     if ($("listenModes")) {
       $("listenModes").addEventListener("click", (ev) => {
+        // 点小箭头 = 展开/折叠设置；点胶囊本体 = 换模式
+        if (ev.target.closest && ev.target.closest(".mc-arrow")) { initAudio(); toggleListenCfg(); return; }
         const b = ev.target.closest ? ev.target.closest(".mode-chip") : null;
         if (!b) return;
         setListenMode(b.getAttribute("data-mode"));
       });
     }
+    // 点设置面板和模式行以外的空白 → 收起
+    document.addEventListener("pointerdown", (ev) => {
+      const p = $("listenCfgPanel");
+      if (!p || !p.classList.contains("show")) return;
+      if (p.contains(ev.target)) return;
+      if ($("listenModes") && $("listenModes").contains(ev.target)) return;
+      closeListenCfg();
+    }, true);
     if ($("lsModes")) {
       $("lsModes").addEventListener("click", (ev) => {
         const b = ev.target.closest ? ev.target.closest(".ls-mode") : null;
@@ -5194,7 +5221,7 @@ voter, 选民"></textarea>
         setListenRate(b.getAttribute("data-rate"));
       });
     }
-    document.querySelectorAll("#listenCfgModal .ls-toggle").forEach(t => {
+    document.querySelectorAll("#listenCfgPanel .ls-toggle").forEach(t => {
       t.onclick = () => setListenFlag(t.getAttribute("data-k"), !listenCfg[t.getAttribute("data-k")]);
     });
     if ($("btnListenEye")) $("btnListenEye").onclick = () => toggleListenBlind();
@@ -5209,11 +5236,9 @@ voter, 选民"></textarea>
     } catch (e) { return "both"; }
   })();
 
-  /* ---------- 随身听：小眼睛（隐藏释义，自测用） ---------- */
-  let listenBlind = (function () {
-    try { return localStorage.getItem("pengpengle_listen_blind") === "1"; } catch (e) { return false; }
-  })();
-  let listenPeek = false;      // 隐藏状态下手动看一眼，换词就重新盖上
+  /* ---------- 随身听：小眼睛已去掉，释义一律显示 ---------- */
+  let listenBlind = false;     // 按钮删了，就固定不隐藏，免得老设置把人锁在"看不见释义"里
+  let listenPeek = false;
 
   function applyListenBlind() {
     if ($("listenBox")) $("listenBox").classList.toggle("blind", listenBlind && !listenPeek);
