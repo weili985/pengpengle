@@ -1295,6 +1295,28 @@
     color: #8fa89c;
     font-size: 13px;
   }
+  .drill-ex {
+    display: none;
+    margin: 18px auto 0;
+    max-width: 560px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(233, 180, 76, 0.35);
+    background: rgba(26, 59, 43, 0.55);
+    text-align: left;
+  }
+  .drill-ex.show { display: block; }
+  .drill-ex-en {
+    font-size: 15px;
+    line-height: 1.5;
+    color: #d8e9de;
+  }
+  .drill-ex-cn {
+    margin-top: 6px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: #ffd68a;
+  }
   .drill-btns {
     position: absolute;
     left: 0;
@@ -1597,6 +1619,7 @@ voter, 选民"></textarea>
   <div style="text-align:center;padding:0 20px;">
     <div class="drill-word" id="listenWord">word</div>
     <div class="drill-cn" id="listenCn"></div>
+    <div class="drill-ex" id="listenEx"></div>
     <div class="drill-hint" id="listenHint">自动连播中…</div>
   </div>
   <div class="lang-row">
@@ -1623,10 +1646,10 @@ voter, 选民"></textarea>
         <span class="ls-mode-name">基础模式</span>
         <span class="ls-mode-sub">单词 + 词义</span>
       </button>
-      <button class="ls-mode off" data-mode="adv">
+      <button class="ls-mode" data-mode="adv">
         <span class="ls-mode-ico">🎓</span>
         <span class="ls-mode-name">进阶模式</span>
-        <span class="ls-mode-sub">暂无例句</span>
+        <span class="ls-mode-sub">单词 + 例句</span>
       </button>
       <button class="ls-mode" data-mode="fast">
         <span class="ls-mode-ico">🚀</span>
@@ -1994,219 +2017,226 @@ voter, 选民"></textarea>
   const $ = id => document.getElementById(id);
 
   let wordbook = [
-    { en: "nominate", cn: "提名" },
-    { en: "ballot", cn: "选票" },
-    { en: "rally", cn: "集会" },
-    { en: "election", cn: "选举" },
-    { en: "resign", cn: "辞职" },
-    { en: "voter", cn: "选民" },
-    { en: "campaign", cn: "竞选活动" },
-    { en: "poll", cn: "民意调查" },
-    { en: "candidate", cn: "候选人" },
-    { en: "coalition", cn: "联盟" },
-    { en: "parliament", cn: "议会" },
-    { en: "congress", cn: "国会" },
-    { en: "senate", cn: "参议院" },
-    { en: "legislation", cn: "立法" },
-    { en: "policy", cn: "政策" },
-    { en: "sanction", cn: "制裁" },
-    { en: "treaty", cn: "条约" },
-    { en: "summit", cn: "峰会" },
-    { en: "diplomacy", cn: "外交" },
-    { en: "ambassador", cn: "大使" },
-    { en: "tariff", cn: "关税" },
-    { en: "inflation", cn: "通货膨胀" },
-    { en: "recession", cn: "经济衰退" },
-    { en: "subsidy", cn: "补贴" },
-    { en: "budget", cn: "预算" },
-    { en: "scandal", cn: "丑闻" },
-    { en: "protest", cn: "抗议" },
-    { en: "referendum", cn: "公投" },
-    { en: "opponent", cn: "竞争对手" },
-    { en: "incumbent", cn: "现任者" },
-    { en: "majority", cn: "多数" },
-    { en: "concession", cn: "承认败选" },
-    { en: "agenda", cn: "议程" },
-    { en: "rhetoric", cn: "言辞" },
-    { en: "partisan", cn: "党派的" },
-    { en: "turnout", cn: "投票率" },
-    { en: "caucus", cn: "党团会议" },
-    { en: "delegate", cn: "代表" },
-    { en: "nominee", cn: "被提名人" },
-    { en: "nomination", cn: "提名" },
-    { en: "platform", cn: "竞选纲领" },
-    { en: "primary", cn: "初选" },
-    { en: "runoff", cn: "决选" },
-    { en: "landslide", cn: "压倒性胜选" },
-    { en: "constituency", cn: "选区" },
-    { en: "electorate", cn: "全体选民" },
-    { en: "suffrage", cn: "选举权" },
-    { en: "gerrymander", cn: "不公正划区" },
-    { en: "filibuster", cn: "冗长辩论" },
-    { en: "quorum", cn: "法定人数" },
-    { en: "whip", cn: "党鞭" },
-    { en: "backbencher", cn: "后座议员" },
-    { en: "cabinet", cn: "内阁" },
-    { en: "minister", cn: "部长" },
-    { en: "bureaucracy", cn: "官僚体系" },
-    { en: "mandate", cn: "民意授权" },
-    { en: "legislator", cn: "立法者" },
-    { en: "committee", cn: "委员会" },
-    { en: "hearing", cn: "听证会" },
-    { en: "subpoena", cn: "传票" },
-    { en: "impeachment", cn: "弹劾" },
-    { en: "veto", cn: "否决" },
-    { en: "override", cn: "推翻否决" },
-    { en: "amendment", cn: "修正案" },
-    { en: "constitution", cn: "宪法" },
-    { en: "statute", cn: "法规" },
-    { en: "ratification", cn: "批准" },
-    { en: "lobbyist", cn: "游说者" },
-    { en: "lobbying", cn: "游说活动" },
-    { en: "advocacy", cn: "倡导" },
-    { en: "grassroots", cn: "基层民众" },
-    { en: "activist", cn: "活动人士" },
-    { en: "polarization", cn: "两极分化" },
-    { en: "bipartisan", cn: "两党共识的" },
-    { en: "opposition", cn: "反对派" },
-    { en: "regime", cn: "政权" },
-    { en: "dictatorship", cn: "独裁统治" },
-    { en: "authoritarian", cn: "威权的" },
-    { en: "democracy", cn: "民主" },
-    { en: "republic", cn: "共和国" },
-    { en: "federation", cn: "联邦" },
-    { en: "sovereignty", cn: "主权" },
-    { en: "autonomy", cn: "自治" },
-    { en: "secession", cn: "分离" },
-    { en: "coup", cn: "政变" },
-    { en: "uprising", cn: "起义" },
-    { en: "insurgency", cn: "叛乱" },
-    { en: "ceasefire", cn: "停火" },
-    { en: "armistice", cn: "休战" },
-    { en: "belligerent", cn: "交战国" },
-    { en: "alliance", cn: "联盟" },
-    { en: "adversary", cn: "对手" },
-    { en: "deterrence", cn: "威慑" },
-    { en: "escalation", cn: "升级" },
-    { en: "retaliation", cn: "报复" },
-    { en: "embargo", cn: "禁运" },
-    { en: "blockade", cn: "封锁" },
-    { en: "humanitarian", cn: "人道援助的" },
-    { en: "refugee", cn: "难民" },
-    { en: "asylum", cn: "庇护" },
-    { en: "deportation", cn: "驱逐出境" },
-    { en: "immigration", cn: "移民入境" },
-    { en: "border", cn: "边境" },
-    { en: "territorial", cn: "领土的" },
-    { en: "annexation", cn: "吞并" },
-    { en: "dispute", cn: "争端" },
-    { en: "mediation", cn: "调解" },
-    { en: "negotiation", cn: "谈判" },
-    { en: "communique", cn: "公报" },
-    { en: "memorandum", cn: "备忘录" },
-    { en: "accord", cn: "协定" },
-    { en: "protocol", cn: "议定书" },
-    { en: "envoy", cn: "特使" },
-    { en: "delegation", cn: "代表团" },
-    { en: "consul", cn: "领事" },
-    { en: "embassy", cn: "大使馆" },
-    { en: "consulate", cn: "领事馆" },
-    { en: "expatriate", cn: "侨民" },
-    { en: "citizenship", cn: "公民身份" },
-    { en: "naturalization", cn: "入籍" },
-    { en: "census", cn: "人口普查" },
-    { en: "demographics", cn: "人口结构" },
-    { en: "redistricting", cn: "重划选区" },
-    { en: "abstain", cn: "弃权" },
-    { en: "abstention", cn: "弃权票" },
-    { en: "tally", cn: "计票" },
-    { en: "recount", cn: "重新计票" },
-    { en: "fraud", cn: "舞弊" },
-    { en: "rigging", cn: "操纵选举" },
-    { en: "intimidation", cn: "恐吓" },
-    { en: "suppression", cn: "压制" },
-    { en: "propaganda", cn: "宣传" },
-    { en: "disinformation", cn: "虚假信息" },
-    { en: "censorship", cn: "审查" },
-    { en: "whistleblower", cn: "举报人" },
-    { en: "transparency", cn: "透明度" },
-    { en: "accountability", cn: "问责" },
-    { en: "corruption", cn: "腐败" },
-    { en: "graft", cn: "贪污" },
-    { en: "bribery", cn: "贿赂" },
-    { en: "embezzlement", cn: "挪用公款" },
-    { en: "audit", cn: "审计" },
-    { en: "oversight", cn: "监督" },
-    { en: "watchdog", cn: "监督机构" },
-    { en: "regulator", cn: "监管者" },
-    { en: "antitrust", cn: "反垄断" },
-    { en: "monopoly", cn: "垄断" },
-    { en: "protectionism", cn: "保护主义" },
-    { en: "multilateral", cn: "多边的" },
-    { en: "bilateral", cn: "双边的" },
-    { en: "unilateral", cn: "单边的" },
-    { en: "forum", cn: "论坛" },
-    { en: "bloc", cn: "集团" },
-    { en: "quota", cn: "配额" },
-    { en: "export", cn: "出口" },
-    { en: "import", cn: "进口" },
-    { en: "deficit", cn: "赤字" },
-    { en: "surplus", cn: "盈余" },
-    { en: "austerity", cn: "紧缩政策" },
-    { en: "stimulus", cn: "刺激措施" },
-    { en: "fiscal", cn: "财政的" },
-    { en: "monetary", cn: "货币的" },
-    { en: "unemployment", cn: "失业" },
-    { en: "welfare", cn: "福利" },
-    { en: "pension", cn: "养老金" },
-    { en: "healthcare", cn: "医疗保健" },
-    { en: "infrastructure", cn: "基础设施" },
-    { en: "taxation", cn: "税收" },
-    { en: "revenue", cn: "财政收入" },
-    { en: "expenditure", cn: "支出" },
-    { en: "governor", cn: "州长" },
-    { en: "mayor", cn: "市长" },
-    { en: "senator", cn: "参议员" },
-    { en: "governance", cn: "治理" },
-    { en: "institution", cn: "制度机构" },
-    { en: "plebiscite", cn: "公民投票" },
-    { en: "constituent", cn: "选区居民" },
-    { en: "challenger", cn: "挑战者" },
-    { en: "frontrunner", cn: "领跑者" },
-    { en: "debate", cn: "辩论" },
-    { en: "endorsement", cn: "背书" },
-    { en: "donor", cn: "捐款人" },
-    { en: "fundraising", cn: "筹款" },
-    { en: "elector", cn: "选举人" },
-    { en: "appropriation", cn: "拨款" },
-    { en: "levy", cn: "征税" },
-    { en: "diplomat", cn: "外交官" },
-    { en: "consensus", cn: "共识" },
-    { en: "declaration", cn: "宣言" },
-    { en: "resolution", cn: "决议" },
-    { en: "draft", cn: "草案" },
-    { en: "motion", cn: "动议" },
-    { en: "clause", cn: "条款" },
-    { en: "provision", cn: "条款规定" },
-    { en: "repeal", cn: "废除" },
-    { en: "enact", cn: "颁布" },
-    { en: "promulgate", cn: "公布法令" },
-    { en: "jurisdiction", cn: "管辖权" },
-    { en: "judiciary", cn: "司法机关" },
-    { en: "verdict", cn: "裁决" },
-    { en: "indictment", cn: "起诉书" },
-    { en: "prosecution", cn: "检控" },
-    { en: "acquittal", cn: "无罪释放" },
-    { en: "pardon", cn: "赦免" },
-    { en: "immunity", cn: "豁免权" },
-    { en: "extradition", cn: "引渡" },
-    { en: "tribunal", cn: "法庭" },
-    { en: "arbitration", cn: "仲裁" },
-    { en: "settlement", cn: "和解" },
-    { en: "litigation", cn: "诉讼" }
+    { en: "nominate", cn: "提名", ex: "The party will nominate its candidate at the convention next month.", excn: "该党将在下个月的全国代表大会上提名候选人。" },
+    { en: "ballot", cn: "选票", ex: "Every voter receives one ballot at the polling station.", excn: "每位选民在投票站领取一张选票。" },
+    { en: "rally", cn: "集会", ex: "Thousands of supporters attended the campaign rally downtown.", excn: "数千名支持者在市中心参加了竞选集会。" },
+    { en: "election", cn: "选举", ex: "The general election will be held in early November.", excn: "大选将在十一月初举行。" },
+    { en: "resign", cn: "辞职", ex: "The minister decided to resign after the scandal.", excn: "这位部长在丑闻之后决定辞职。" },
+    { en: "voter", cn: "选民", ex: "Young voters turned out in record numbers this year.", excn: "今年年轻选民的投票人数创下纪录。" },
+    { en: "campaign", cn: "竞选活动", ex: "Her campaign lasted almost a full year.", excn: "她的竞选活动持续了将近一年。" },
+    { en: "poll", cn: "民意调查", ex: "The latest poll shows the two candidates neck and neck.", excn: "最新民调显示两位候选人势均力敌。" },
+    { en: "candidate", cn: "候选人", ex: "Each candidate had five minutes to speak.", excn: "每位候选人有五分钟的发言时间。" },
+    { en: "coalition", cn: "联盟", ex: "Two small parties formed a coalition after the vote.", excn: "投票之后两个小党组成了联盟。" },
+    { en: "parliament", cn: "议会", ex: "Parliament passed the bill by a narrow margin.", excn: "议会以微弱多数通过了这项法案。" },
+    { en: "congress", cn: "国会", ex: "Congress will vote on the budget next week.", excn: "国会将在下周对预算进行表决。" },
+    { en: "senate", cn: "参议院", ex: "The Senate confirmed the nominee on Tuesday.", excn: "参议院在周二确认了这位被提名人。" },
+    { en: "legislation", cn: "立法", ex: "New legislation aims to protect consumer data.", excn: "新立法旨在保护消费者数据。" },
+    { en: "policy", cn: "政策", ex: "The government announced a new energy policy.", excn: "政府宣布了一项新的能源政策。" },
+    { en: "sanction", cn: "制裁", ex: "The council agreed to impose economic sanctions.", excn: "理事会同意实施经济制裁。" },
+    { en: "treaty", cn: "条约", ex: "Both countries signed the treaty in March.", excn: "两国在三月份签署了该条约。" },
+    { en: "summit", cn: "峰会", ex: "Leaders will meet at the climate summit in June.", excn: "各国领导人将在六月的峰会上会面。" },
+    { en: "diplomacy", cn: "外交", ex: "Quiet diplomacy often works better than public threats.", excn: "安静的外交往往比公开威胁更有效。" },
+    { en: "ambassador", cn: "大使", ex: "The ambassador was summoned to explain the remarks.", excn: "大使被召见以解释这些言论。" },
+    { en: "tariff", cn: "关税", ex: "New tariffs raised the price of imported steel.", excn: "新关税抬高了进口钢材的价格。" },
+    { en: "inflation", cn: "通货膨胀", ex: "Inflation slowed to three percent last quarter.", excn: "上季度通货膨胀率降至百分之三。" },
+    { en: "recession", cn: "经济衰退", ex: "The economy slipped into recession after the crisis.", excn: "危机之后经济陷入衰退。" },
+    { en: "subsidy", cn: "补贴", ex: "Farmers rely on a government subsidy for fuel.", excn: "农民靠政府的燃油补贴维持生产。" },
+    { en: "budget", cn: "预算", ex: "The city approved a budget of two billion dollars.", excn: "该市批准了二十亿美元的预算。" },
+    { en: "scandal", cn: "丑闻", ex: "The scandal forced two officials to step down.", excn: "这起丑闻迫使两名官员下台。" },
+    { en: "protest", cn: "抗议", ex: "Peaceful protests continued outside the building.", excn: "和平抗议在楼外持续进行。" },
+    { en: "referendum", cn: "公投", ex: "Voters rejected the proposal in the referendum.", excn: "选民在公投中否决了该提案。" },
+    { en: "opponent", cn: "竞争对手", ex: "Her main opponent attacked the tax plan.", excn: "她的主要竞争对手抨击了这项税收计划。" },
+    { en: "incumbent", cn: "现任者", ex: "The incumbent won by a comfortable margin.", excn: "现任者以明显优势获胜。" },
+    { en: "majority", cn: "多数", ex: "The bill passed with a majority of thirty votes.", excn: "该法案以三十票的多数获得通过。" },
+    { en: "concession", cn: "承认败选", ex: "He offered a concession speech that night.", excn: "当晚他发表了承认败选的讲话。" },
+    { en: "agenda", cn: "议程", ex: "Housing tops the agenda this session.", excn: "住房问题位居本届会议的议程首位。" },
+    { en: "rhetoric", cn: "言辞", ex: "The rhetoric grew sharper as the vote approached.", excn: "随着投票临近，言辞变得更加尖锐。" },
+    { en: "partisan", cn: "党派的", ex: "Partisan debate blocked the compromise.", excn: "党派之争阻碍了妥协方案。" },
+    { en: "turnout", cn: "投票率", ex: "Turnout reached sixty percent in rural areas.", excn: "农村地区的投票率达到百分之六十。" },
+    { en: "caucus", cn: "党团会议", ex: "The caucus meets every Wednesday morning.", excn: "党团会议每周三上午举行。" },
+    { en: "delegate", cn: "代表", ex: "Each state sends delegates to the convention.", excn: "每个州都派代表参加全国代表大会。" },
+    { en: "nominee", cn: "被提名人", ex: "The nominee promised to release her tax returns.", excn: "被提名人承诺公开她的纳税申报单。" },
+    { en: "nomination", cn: "提名", ex: "His nomination surprised many observers.", excn: "他的提名让许多观察人士感到意外。" },
+    { en: "platform", cn: "竞选纲领", ex: "The party platform calls for lower taxes.", excn: "该党的竞选纲领主张减税。" },
+    { en: "primary", cn: "初选", ex: "She won three primaries in a single week.", excn: "她一周内赢下了三场初选。" },
+    { en: "runoff", cn: "决选", ex: "The runoff will decide the last seat.", excn: "决选将决定最后一个席位。" },
+    { en: "landslide", cn: "压倒性胜选", ex: "He won in a landslide of sixty points.", excn: "他以六十个百分点的压倒优势获胜。" },
+    { en: "constituency", cn: "选区", ex: "The member of parliament visits her constituency every weekend.", excn: "这位议员每个周末都回选区走访。" },
+    { en: "electorate", cn: "全体选民", ex: "The electorate is younger than it was ten years ago.", excn: "全体选民的年龄比十年前更年轻。" },
+    { en: "suffrage", cn: "选举权", ex: "Women fought for suffrage for decades.", excn: "妇女为选举权斗争了数十年。" },
+    { en: "gerrymander", cn: "不公正划区", ex: "Critics say the map was gerrymandered to favour one party.", excn: "批评者称该地图被不公正划区以利于一党。" },
+    { en: "filibuster", cn: "冗长辩论", ex: "The senator used a filibuster to delay the vote.", excn: "该参议员用冗长辩论拖延表决。" },
+    { en: "quorum", cn: "法定人数", ex: "The meeting was postponed for lack of a quorum.", excn: "会议因不足法定人数而延期。" },
+    { en: "whip", cn: "党鞭", ex: "The whip told members how to vote.", excn: "党鞭告知议员们该如何投票。" },
+    { en: "backbencher", cn: "后座议员", ex: "A backbencher raised the question in the chamber.", excn: "一位后座议员在议事厅提出了这个问题。" },
+    { en: "cabinet", cn: "内阁", ex: "The prime minister reshuffled the cabinet.", excn: "首相改组了内阁。" },
+    { en: "minister", cn: "部长", ex: "The finance minister presented the annual plan.", excn: "财政部长提交了年度计划。" },
+    { en: "bureaucracy", cn: "官僚体系", ex: "Slow bureaucracy delayed the permits for months.", excn: "拖沓的官僚体系让许可证拖延了数月。" },
+    { en: "mandate", cn: "民意授权", ex: "The government claims a mandate for reform.", excn: "政府声称拥有推动改革的民意授权。" },
+    { en: "legislator", cn: "立法者", ex: "Legislators debated the bill until midnight.", excn: "立法者们辩论该法案直至午夜。" },
+    { en: "committee", cn: "委员会", ex: "The committee will report back in April.", excn: "委员会将在四月提交报告。" },
+    { en: "hearing", cn: "听证会", ex: "Three witnesses spoke at the public hearing.", excn: "三位证人在公开听证会上发言。" },
+    { en: "subpoena", cn: "传票", ex: "The court issued a subpoena for the records.", excn: "法院发出传票要求提供这些记录。" },
+    { en: "impeachment", cn: "弹劾", ex: "The house opened an impeachment inquiry.", excn: "众议院启动了弹劾调查。" },
+    { en: "veto", cn: "否决", ex: "The president threatened to veto the bill.", excn: "总统威胁要否决该法案。" },
+    { en: "override", cn: "推翻否决", ex: "Lawmakers failed to override the veto.", excn: "议员们未能推翻否决。" },
+    { en: "amendment", cn: "修正案", ex: "The amendment adds a clause on privacy.", excn: "该修正案增加了一条关于隐私的条款。" },
+    { en: "constitution", cn: "宪法", ex: "The constitution guarantees freedom of speech.", excn: "宪法保障言论自由。" },
+    { en: "statute", cn: "法规", ex: "The statute takes effect on January first.", excn: "该法规于一月一日生效。" },
+    { en: "ratification", cn: "批准", ex: "Ratification requires two thirds of the states.", excn: "批准需要三分之二的州同意。" },
+    { en: "lobbyist", cn: "游说者", ex: "A lobbyist met the senator in the hallway.", excn: "一名游说者在走廊里会见了这位参议员。" },
+    { en: "lobbying", cn: "游说活动", ex: "Lobbying rules require public disclosure.", excn: "游说规则要求公开披露。" },
+    { en: "advocacy", cn: "倡导", ex: "Her advocacy helped change the law.", excn: "她的倡导推动了法律变革。" },
+    { en: "grassroots", cn: "基层民众", ex: "Grassroots groups organized the door to door campaign.", excn: "基层团体组织了逐户上门的宣传。" },
+    { en: "activist", cn: "活动人士", ex: "Activists gathered signatures outside the station.", excn: "活动人士在车站外征集签名。" },
+    { en: "polarization", cn: "两极分化", ex: "Political polarization has deepened over ten years.", excn: "十年来政治两极分化不断加深。" },
+    { en: "bipartisan", cn: "两党共识的", ex: "They reached a bipartisan agreement on roads.", excn: "他们就道路建设达成了两党共识。" },
+    { en: "opposition", cn: "反对派", ex: "The opposition demanded an early election.", excn: "反对派要求提前举行选举。" },
+    { en: "regime", cn: "政权", ex: "The regime tightened control over the press.", excn: "该政权加强了对新闻界的控制。" },
+    { en: "dictatorship", cn: "独裁统治", ex: "The country lived under a dictatorship for decades.", excn: "这个国家在独裁统治下生活了数十年。" },
+    { en: "authoritarian", cn: "威权的", ex: "Critics describe the government as authoritarian.", excn: "批评者称该政府是威权的。" },
+    { en: "democracy", cn: "民主", ex: "Democracy depends on free and fair elections.", excn: "民主有赖于自由公正的选举。" },
+    { en: "republic", cn: "共和国", ex: "The republic was founded in nineteen fifty.", excn: "这个共和国成立于一九五〇年。" },
+    { en: "federation", cn: "联邦", ex: "The federation consists of twelve member states.", excn: "该联邦由十二个成员国组成。" },
+    { en: "sovereignty", cn: "主权", ex: "Both sides respect each other's sovereignty.", excn: "双方尊重彼此的主权。" },
+    { en: "autonomy", cn: "自治", ex: "The region enjoys a high degree of autonomy.", excn: "该地区享有高度自治。" },
+    { en: "secession", cn: "分离", ex: "The court rejected the call for secession.", excn: "法院驳回了分离的诉求。" },
+    { en: "coup", cn: "政变", ex: "The coup failed within forty eight hours.", excn: "政变在四十八小时内失败。" },
+    { en: "uprising", cn: "起义", ex: "The uprising began in the main square of the capital.", excn: "起义始于首都的主要广场。" },
+    { en: "insurgency", cn: "叛乱", ex: "The insurgency spread across the northern provinces.", excn: "叛乱蔓延至北部各省。" },
+    { en: "ceasefire", cn: "停火", ex: "Both sides agreed to a temporary ceasefire.", excn: "双方同意临时停火。" },
+    { en: "armistice", cn: "休战", ex: "The armistice was signed in a railway carriage.", excn: "休战协定在一节火车车厢里签署。" },
+    { en: "belligerent", cn: "交战国", ex: "The belligerent states exchanged prisoners.", excn: "交战国交换了战俘。" },
+    { en: "alliance", cn: "联盟", ex: "The military alliance held joint exercises.", excn: "该军事联盟举行了联合演习。" },
+    { en: "adversary", cn: "对手", ex: "He treated every rival as an adversary.", excn: "他把每个竞争对手都当作对手。" },
+    { en: "deterrence", cn: "威慑", ex: "Nuclear deterrence kept the peace for decades.", excn: "核威慑维持了数十年的和平。" },
+    { en: "escalation", cn: "升级", ex: "Both governments feared a sudden escalation.", excn: "两国政府都担心冲突突然升级。" },
+    { en: "retaliation", cn: "报复", ex: "The tariffs triggered immediate retaliation.", excn: "这些关税引发了立即的报复。" },
+    { en: "embargo", cn: "禁运", ex: "The embargo banned oil exports for a year.", excn: "禁运令禁止石油出口一年。" },
+    { en: "blockade", cn: "封锁", ex: "A naval blockade cut off the port.", excn: "海上封锁切断了港口的通道。" },
+    { en: "humanitarian", cn: "人道援助的", ex: "Humanitarian aid reached the camp on Friday.", excn: "人道援助在周五抵达了营地。" },
+    { en: "refugee", cn: "难民", ex: "Thousands of refugees crossed the border at night.", excn: "数千名难民在夜间越过边境。" },
+    { en: "asylum", cn: "庇护", ex: "She applied for asylum in a neighbouring country.", excn: "她在邻国申请庇护。" },
+    { en: "deportation", cn: "驱逐出境", ex: "The court blocked his deportation last month.", excn: "法院上个月阻止了对他的驱逐出境。" },
+    { en: "immigration", cn: "移民入境", ex: "Immigration rules changed again this spring.", excn: "移民入境规定今年春天再次修改。" },
+    { en: "border", cn: "边境", ex: "Guards patrol the border around the clock.", excn: "卫兵昼夜巡逻边境。" },
+    { en: "territorial", cn: "领土的", ex: "The two states settled their territorial dispute.", excn: "两国解决了领土争端。" },
+    { en: "annexation", cn: "吞并", ex: "The annexation was condemned by many countries.", excn: "这次吞并遭到许多国家谴责。" },
+    { en: "dispute", cn: "争端", ex: "The trade dispute lasted almost two years.", excn: "这场贸易争端持续了近两年。" },
+    { en: "mediation", cn: "调解", ex: "A neutral country offered mediation.", excn: "一个中立国主动提出调解。" },
+    { en: "negotiation", cn: "谈判", ex: "The negotiation resumed after a short break.", excn: "短暂休息后谈判重新开始。" },
+    { en: "communique", cn: "公报", ex: "The communique avoided mentioning the dispute.", excn: "公报回避提及这一争端。" },
+    { en: "memorandum", cn: "备忘录", ex: "Both sides signed a memorandum of understanding.", excn: "双方签署了一份谅解备忘录。" },
+    { en: "accord", cn: "协定", ex: "The peace accord was signed at dawn.", excn: "和平协定在黎明时分签署。" },
+    { en: "protocol", cn: "议定书", ex: "The protocol sets limits on emissions.", excn: "该议定书规定了排放上限。" },
+    { en: "envoy", cn: "特使", ex: "A special envoy flew to the region on Sunday.", excn: "一名特使周日飞往该地区。" },
+    { en: "delegation", cn: "代表团", ex: "The delegation met the foreign minister.", excn: "代表团会见了外交部长。" },
+    { en: "consul", cn: "领事", ex: "The consul helped the stranded tourists.", excn: "领事帮助了滞留的游客。" },
+    { en: "embassy", cn: "大使馆", ex: "The embassy issued a travel warning.", excn: "大使馆发布了旅行警示。" },
+    { en: "consulate", cn: "领事馆", ex: "The consulate moved to a larger building.", excn: "领事馆迁入了一座更大的楼。" },
+    { en: "expatriate", cn: "侨民", ex: "Many expatriates vote by post.", excn: "许多侨民通过邮寄投票。" },
+    { en: "citizenship", cn: "公民身份", ex: "She received citizenship after five years.", excn: "她五年后获得了公民身份。" },
+    { en: "naturalization", cn: "入籍", ex: "Naturalization ceremonies are held four times a year.", excn: "入籍仪式每年举行四次。" },
+    { en: "census", cn: "人口普查", ex: "The census is taken every ten years.", excn: "人口普查每十年进行一次。" },
+    { en: "demographics", cn: "人口结构", ex: "The party studies demographics before every election.", excn: "该党在每次选举前都研究人口结构。" },
+    { en: "redistricting", cn: "重划选区", ex: "Redistricting follows the new census figures.", excn: "重划选区依据新的人口普查数字进行。" },
+    { en: "abstain", cn: "弃权", ex: "Three members chose to abstain.", excn: "三名成员选择弃权。" },
+    { en: "abstention", cn: "弃权票", ex: "Abstentions counted for a quarter of the vote.", excn: "弃权票占全部投票的四分之一。" },
+    { en: "tally", cn: "计票", ex: "Officials finished the tally before midnight.", excn: "工作人员在午夜前完成了计票。" },
+    { en: "recount", cn: "重新计票", ex: "The close race led to a recount.", excn: "势均力敌的选情导致了重新计票。" },
+    { en: "fraud", cn: "舞弊", ex: "Investigators found no evidence of fraud.", excn: "调查人员未发现舞弊的证据。" },
+    { en: "rigging", cn: "操纵选举", ex: "Observers reported widespread vote rigging.", excn: "观察员报告存在广泛的操纵选举行为。" },
+    { en: "intimidation", cn: "恐吓", ex: "Voters complained of intimidation at the entrance.", excn: "选民抱怨在入口处遭到恐吓。" },
+    { en: "suppression", cn: "压制", ex: "The report described the suppression of dissent.", excn: "报告描述了对抗议声音的压制。" },
+    { en: "propaganda", cn: "宣传", ex: "State propaganda filled the evening news.", excn: "官方宣传充斥着晚间新闻。" },
+    { en: "disinformation", cn: "虚假信息", ex: "The network spread disinformation for months.", excn: "该网络散布虚假信息长达数月。" },
+    { en: "censorship", cn: "审查", ex: "Strict censorship slowed the reporting.", excn: "严格的审查拖慢了报道。" },
+    { en: "whistleblower", cn: "举报人", ex: "A whistleblower leaked the internal memo.", excn: "一名举报人泄露了内部备忘录。" },
+    { en: "transparency", cn: "透明度", ex: "Donors demanded more transparency in spending.", excn: "捐款人要求在支出上更加透明。" },
+    { en: "accountability", cn: "问责", ex: "Citizens demanded accountability from officials.", excn: "公民要求官员接受问责。" },
+    { en: "corruption", cn: "腐败", ex: "The investigation uncovered corruption at the top.", excn: "调查揭露了高层的腐败。" },
+    { en: "graft", cn: "贪污", ex: "He was jailed for graft and tax evasion.", excn: "他因贪污和逃税入狱。" },
+    { en: "bribery", cn: "贿赂", ex: "The contractor admitted to bribery.", excn: "这名承包商承认了贿赂行为。" },
+    { en: "embezzlement", cn: "挪用公款", ex: "The treasurer faced charges of embezzlement.", excn: "这名财务主管面临挪用公款的指控。" },
+    { en: "audit", cn: "审计", ex: "An independent audit found major errors.", excn: "独立审计发现了重大错误。" },
+    { en: "oversight", cn: "监督", ex: "Congress exercises oversight over the agencies.", excn: "国会对各机构行使监督。" },
+    { en: "watchdog", cn: "监督机构", ex: "The watchdog publishes a report every year.", excn: "该监督机构每年发布一份报告。" },
+    { en: "regulator", cn: "监管者", ex: "The regulator fined the bank two million dollars.", excn: "监管者对这家银行罚款两百万美元。" },
+    { en: "antitrust", cn: "反垄断", ex: "Antitrust lawyers challenged the merger.", excn: "反垄断律师对该合并提出异议。" },
+    { en: "monopoly", cn: "垄断", ex: "The company held a near monopoly on parts.", excn: "这家公司在零部件上近乎垄断。" },
+    { en: "protectionism", cn: "保护主义", ex: "Rising protectionism worries exporters.", excn: "保护主义抬头令出口商担忧。" },
+    { en: "multilateral", cn: "多边的", ex: "They prefer multilateral talks to bilateral deals.", excn: "他们更倾向于多边谈判而非双边协议。" },
+    { en: "bilateral", cn: "双边的", ex: "The two countries signed a bilateral trade pact.", excn: "两国签署了双边贸易协定。" },
+    { en: "unilateral", cn: "单边的", ex: "A unilateral move angered the partners.", excn: "单边举动激怒了合作伙伴。" },
+    { en: "forum", cn: "论坛", ex: "The forum meets twice a year.", excn: "该论坛每年举行两次会议。" },
+    { en: "bloc", cn: "集团", ex: "The trading bloc expanded to twenty members.", excn: "该贸易集团扩大到二十个成员。" },
+    { en: "quota", cn: "配额", ex: "The quota limits imports to five thousand tons.", excn: "配额把进口限制在五千吨。" },
+    { en: "export", cn: "出口", ex: "Exports rose sharply in the second half.", excn: "下半年出口大幅增长。" },
+    { en: "import", cn: "进口", ex: "The country imports most of its fuel.", excn: "该国大部分燃料依赖进口。" },
+    { en: "deficit", cn: "赤字", ex: "The deficit widened after the tax cut.", excn: "减税之后赤字扩大。" },
+    { en: "surplus", cn: "盈余", ex: "The budget ended the year with a surplus.", excn: "预算以盈余结束了这一年。" },
+    { en: "austerity", cn: "紧缩政策", ex: "Austerity cuts reduced public spending.", excn: "紧缩政策削减了公共开支。" },
+    { en: "stimulus", cn: "刺激措施", ex: "The stimulus package created thousands of jobs.", excn: "刺激计划创造了数千个就业岗位。" },
+    { en: "fiscal", cn: "财政的", ex: "Fiscal policy tightened in the spring.", excn: "财政政策在春季收紧。" },
+    { en: "monetary", cn: "货币的", ex: "Monetary policy remains loose for now.", excn: "目前货币政策依然宽松。" },
+    { en: "unemployment", cn: "失业", ex: "Unemployment fell to five percent.", excn: "失业率降至百分之五。" },
+    { en: "welfare", cn: "福利", ex: "The reform targeted child welfare payments.", excn: "改革针对儿童福利补贴。" },
+    { en: "pension", cn: "养老金", ex: "The pension age will rise next year.", excn: "养老金领取年龄明年将上调。" },
+    { en: "healthcare", cn: "医疗保健", ex: "Healthcare costs dominate the debate.", excn: "医疗保健成本主导了这场辩论。" },
+    { en: "infrastructure", cn: "基础设施", ex: "The plan invests in roads and bridges.", excn: "该计划投资于公路和桥梁。" },
+    { en: "taxation", cn: "税收", ex: "Taxation on fuel sparked angry letters.", excn: "燃油税收引发了愤怒的来信。" },
+    { en: "revenue", cn: "财政收入", ex: "Revenue grew faster than spending.", excn: "财政收入的增长快于支出。" },
+    { en: "expenditure", cn: "支出", ex: "Public expenditure rose by six percent.", excn: "公共支出增长了百分之六。" },
+    { en: "governor", cn: "州长", ex: "The governor declared a state of emergency.", excn: "州长宣布进入紧急状态。" },
+    { en: "mayor", cn: "市长", ex: "The mayor opened the new library.", excn: "市长为新图书馆揭幕。" },
+    { en: "senator", cn: "参议员", ex: "The senator spoke for forty minutes.", excn: "这位参议员讲了四十分钟。" },
+    { en: "governance", cn: "治理", ex: "Good governance requires open accounts.", excn: "良好治理需要公开的账目。" },
+    { en: "institution", cn: "制度机构", ex: "The central bank is an independent institution.", excn: "中央银行是一个独立的制度机构。" },
+    { en: "plebiscite", cn: "公民投票", ex: "The plebiscite drew a large turnout.", excn: "这次公民投票吸引了大量选民。" },
+    { en: "constituent", cn: "选区居民", ex: "She holds a weekly meeting with constituents.", excn: "她每周与选区居民见面。" },
+    { en: "challenger", cn: "挑战者", ex: "The challenger raised more money than the incumbent.", excn: "挑战者筹到的钱比现任者更多。" },
+    { en: "frontrunner", cn: "领跑者", ex: "The frontrunner stumbled in the second debate.", excn: "领跑者在第二场辩论中失手。" },
+    { en: "debate", cn: "辩论", ex: "The debate lasted ninety minutes.", excn: "这场辩论持续了九十分钟。" },
+    { en: "endorsement", cn: "背书", ex: "The union gave its endorsement to the mayor.", excn: "工会背书支持这位市长。" },
+    { en: "donor", cn: "捐款人", ex: "Large donors filled the campaign account.", excn: "大额捐款人充实了竞选账户。" },
+    { en: "fundraising", cn: "筹款", ex: "Fundraising slowed in the final month.", excn: "最后一个月筹款放缓。" },
+    { en: "elector", cn: "选举人", ex: "Each elector casts one vote in December.", excn: "每位选举人在十二月投一票。" },
+    { en: "appropriation", cn: "拨款", ex: "The appropriation covers rural clinics.", excn: "这笔拨款用于乡村诊所。" },
+    { en: "levy", cn: "征税", ex: "The council voted to levy a new tax on land.", excn: "议会投票决定对土地征收新税。" },
+    { en: "diplomat", cn: "外交官", ex: "A senior diplomat handled the talks.", excn: "一位资深外交官主持了会谈。" },
+    { en: "consensus", cn: "共识", ex: "The group reached a consensus after two hours.", excn: "经过两个小时，该小组达成了共识。" },
+    { en: "declaration", cn: "宣言", ex: "The ministers signed a joint declaration.", excn: "部长们签署了一份联合宣言。" },
+    { en: "resolution", cn: "决议", ex: "The council adopted the resolution unanimously.", excn: "理事会一致通过了该决议。" },
+    { en: "draft", cn: "草案", ex: "A draft of the bill leaked to the press.", excn: "法案草案泄露给了媒体。" },
+    { en: "motion", cn: "动议", ex: "The motion failed by four votes.", excn: "该动议以四票之差未获通过。" },
+    { en: "clause", cn: "条款", ex: "A sunset clause ends the rule in five years.", excn: "一项日落条款使该规定五年后终止。" },
+    { en: "provision", cn: "条款规定", ex: "The provision protects small businesses.", excn: "该条款规定保护小企业。" },
+    { en: "repeal", cn: "废除", ex: "Lawmakers voted to repeal the old tax.", excn: "议员们投票废除了旧税。" },
+    { en: "enact", cn: "颁布", ex: "The state enacted a stricter safety law.", excn: "该州颁布了更严格的安全法。" },
+    { en: "promulgate", cn: "公布法令", ex: "The ministry promulgated new rules in June.", excn: "该部在六月公布了新规。" },
+    { en: "jurisdiction", cn: "管辖权", ex: "The case falls outside this court's jurisdiction.", excn: "该案件不属本法院的管辖权范围。" },
+    { en: "judiciary", cn: "司法机关", ex: "An independent judiciary protects citizens.", excn: "独立的司法机关保护公民。" },
+    { en: "verdict", cn: "裁决", ex: "The jury reached a verdict in two hours.", excn: "陪审团在两个小时内作出裁决。" },
+    { en: "indictment", cn: "起诉书", ex: "The grand jury returned an indictment.", excn: "大陪审团提交了起诉书。" },
+    { en: "prosecution", cn: "检控", ex: "The prosecution called its first witness.", excn: "检控方传唤了第一位证人。" },
+    { en: "acquittal", cn: "无罪释放", ex: "The trial ended in an acquittal.", excn: "审判以无罪释放告终。" },
+    { en: "pardon", cn: "赦免", ex: "The governor granted a pardon last week.", excn: "州长上周给予了赦免。" },
+    { en: "immunity", cn: "豁免权", ex: "The witness claimed immunity from prosecution.", excn: "该证人主张免于起诉的豁免权。" },
+    { en: "extradition", cn: "引渡", ex: "The court approved his extradition.", excn: "法院批准了对他的引渡。" },
+    { en: "tribunal", cn: "法庭", ex: "An international tribunal heard the case.", excn: "一个国际法庭审理了此案。" },
+    { en: "arbitration", cn: "仲裁", ex: "The dispute went to arbitration in May.", excn: "该争端在五月进入仲裁。" },
+    { en: "settlement", cn: "和解", ex: "The parties reached a settlement out of court.", excn: "各方在庭外达成了和解。" },
+    { en: "litigation", cn: "诉讼", ex: "Litigation over the land lasted six years.", excn: "关于这块土地的诉讼持续了六年。" }
   ];
 
   const DEFAULT_WORDBOOK = wordbook.map(w => ({ ...w }));
+  // 例句表：按英文词查。哪怕当前词库是自建的/被编辑过、条目上没有 ex 字段，也能查到内置词的例句
+  const EXAMPLES = new Map();
+  wordbook.forEach(w => { if (w.ex) EXAMPLES.set(String(w.en).trim().toLowerCase(), { ex: w.ex, excn: w.excn || "" }); });
+  function exampleFor(word) {
+    const key = String(word || "").trim().toLowerCase();
+    return EXAMPLES.get(key) || null;
+  }
   // 长按卡片查的音标（内置词，CMU 词典转 IPA；自建词没有就显示暂无）
   const IPA_MAP = {
     "nominate": "ˈnɑməˌneɪt",
@@ -3187,7 +3217,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.8");
+    bits.push("版本 v1.10.9");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -4913,7 +4943,7 @@ voter, 选民"></textarea>
     try { o = JSON.parse(localStorage.getItem(LISTEN_CFG_KEY) || "{}") || {}; } catch (e) { o = {}; }
     const savedRate = Number(o.rate);
     return {
-      mode: (o.mode === "fast" || o.mode === "adv" || o.mode === "basic") ? (o.mode === "adv" ? "basic" : o.mode) : "basic",
+      mode: (o.mode === "fast" || o.mode === "adv" || o.mode === "basic") ? o.mode : "basic",
       times: LISTEN_TIMES.indexOf(Number(o.times)) >= 0 ? Number(o.times) : 1,
       rate: LISTEN_RATES.indexOf(savedRate) >= 0 ? savedRate : 1.0
     };
@@ -4925,6 +4955,7 @@ voter, 选民"></textarea>
 
   function listenCfgModeName() {
     if (listenCfg.mode === "fast") return "速刷";
+    if (listenCfg.mode === "adv") return "进阶";
     return "基础";
   }
 
@@ -4957,10 +4988,11 @@ voter, 选民"></textarea>
   }
 
   function setListenMode(m) {
-    if (m === "adv") { toast("进阶模式要例句，现在的词库只有单词和词义"); return; }
-    listenCfg.mode = (m === "fast") ? "fast" : "basic";
+    listenCfg.mode = (m === "fast") ? "fast" : (m === "adv" ? "adv" : "basic");
     saveListenCfg(); renderListenCfg();
     if ($("listenBox") && $("listenBox").classList.contains("show")) {
+      const cur = listenList[listenIdx];
+      if (cur) renderListenEx(cur);
       if (listenPlaying) { listenStep(); }            // 立刻按新设置重播当前词
       else if ($("listenHint")) $("listenHint").innerText = listenHintText();
     }
@@ -5039,6 +5071,30 @@ voter, 选民"></textarea>
     }
     if ($("btnLangCn")) $("btnLangCn").classList.toggle("on", langMode === "cn");
     if ($("btnLangEn")) $("btnLangEn").classList.toggle("on", langMode === "en");
+    const ex = $("listenEx");
+    if (ex) {
+      const cnLine = ex.querySelector(".drill-ex-cn");
+      if (cnLine) cnLine.style.display = (langMode === "en") ? "none" : "";
+    }
+  }
+
+  // 随身听里的例句：只有进阶模式才显示
+  function renderListenEx(w) {
+    const box = $("listenEx");
+    if (!box) return;
+    const item = (listenCfg.mode === "adv") ? exampleFor(w && w.en) : null;
+    if (!item) { box.classList.remove("show"); box.innerHTML = ""; return; }
+    box.innerHTML = "";
+    const en = document.createElement("div");
+    en.className = "drill-ex-en";
+    en.innerText = item.ex;
+    const cn = document.createElement("div");
+    cn.className = "drill-ex-cn";
+    cn.innerText = item.excn || "";
+    if (langMode === "en") cn.style.display = "none";
+    box.appendChild(en);
+    if (item.excn) box.appendChild(cn);
+    box.classList.add("show");
   }
 
   function setLangMode(m) {
@@ -5069,7 +5125,10 @@ voter, 选民"></textarea>
     $("listenProg").innerText = (listenIdx + 1) + "/" + listenList.length;
     $("listenWord").innerText = w.en;
     $("listenCn").innerText = w.cn || "";
-    $("listenHint").innerText = listenHintText();
+    renderListenEx(w);
+    $("listenHint").innerText = (listenCfg.mode === "adv" && !exampleFor(w.en))
+      ? listenHintText() + "　这个词没有例句，按基础模式读词义"
+      : listenHintText();
     initAudio();
 
     const rate = listenCfg.rate || 1.0;
@@ -5077,7 +5136,13 @@ voter, 选民"></textarea>
     const times = infinite ? 1 : listenCfg.times;
     const queue = [];
     for (let i = 0; i < times; i++) queue.push({ t: w.en, kind: "en", r: rate });
-    if (listenCfg.mode !== "fast" && w.cn) queue.push({ t: w.cn, kind: "cn", r: rate });
+    if (listenCfg.mode === "adv") {
+      const item = exampleFor(w.en);
+      if (item) queue.push({ t: item.ex, kind: "en", r: rate });     // 进阶：再读一遍英文例句
+      else if (w.cn) queue.push({ t: w.cn, kind: "cn", r: rate });   // 这个词没有例句 → 退回基础（读词义）
+    } else if (listenCfg.mode !== "fast" && w.cn) {
+      queue.push({ t: w.cn, kind: "cn", r: rate });
+    }
 
     const gap = Math.round(1050 / rate);            // 一句接一句的间隔，倍数越大越紧
     let qi = 0;
