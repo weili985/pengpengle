@@ -3083,7 +3083,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.5");
+    bits.push("版本 v1.10.6");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -3974,7 +3974,7 @@ voter, 选民"></textarea>
     if ($("mrNum")) $("mrNum").innerText = String(mastered.length);
     if (!box) return;
     if (!mastered.length) {
-      box.innerHTML = '<div class="nb-empty">还没有熟词。点一张英文卡（金色★圈起来），再点上面的「熟」，这个词就不再出现了。</div>';
+      box.innerHTML = '<div class="nb-empty">还没有熟词</div>';
       return;
     }
     box.innerHTML = mastered.map(w => `
@@ -4062,11 +4062,18 @@ voter, 选民"></textarea>
     return card.type === "en" ? { en: card.text, cn: card.pair } : { en: card.pair, cn: card.text };
   }
 
-  // 双击一张卡：已经收进生词本的直接忽略，不收的弹面板挑一本
+  // 双击一张卡：已经收进生词本的，直接把生词本面板打开并切到它所在的那本；没收的弹面板挑一本
   function dblPickNotebook(card) {
     const w = cardWord(card);
-    // 已经收进生词本的词，双击不给任何反应（不弹面板、也不弹提示）
-    if (nbFindGroup(w.en)) return;
+    const g = nbFindGroup(w.en);
+    if (g) {
+      const i = nbGroups.indexOf(g);
+      nbCurrent = i < 0 ? 0 : i;
+      saveNotebook();
+      openNotebook();
+      toast("「" + w.en + "」在生词本「" + g.name + "」里");
+      return;
+    }
     openNbPick(card);
   }
 
