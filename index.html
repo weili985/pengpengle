@@ -1401,6 +1401,57 @@
   .ls-chip.on { background: #e9b44c; border-color: #e9b44c; color: #10271d; }
   .ls-chip:active { opacity: 0.78; }
   .ls-tip { font-size: 12px; color: #8fa89c; margin: 2px 0 14px; line-height: 1.5; }
+  /* 开关行：跟参考 App 一样一条一条的白色开关，这里沿用深绿金框 */
+  .ls-switch-card {
+    border-radius: 14px;
+    border: 1px solid rgba(233, 180, 76, 0.28);
+    background: rgba(26, 59, 43, 0.7);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .ls-sw {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 13px 14px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #e9dcc0;
+    border-bottom: 1px solid rgba(233, 180, 76, 0.16);
+  }
+  .ls-sw:last-child { border-bottom: 0; }
+  .ls-toggle {
+    position: relative;
+    flex: 0 0 auto;
+    width: 48px;
+    height: 27px;
+    border-radius: 14px;
+    border: 1px solid rgba(233, 180, 76, 0.45);
+    background: rgba(255, 255, 255, 0.14);
+    transition: background 0.16s ease, border-color 0.16s ease;
+  }
+  .ls-toggle i {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    background: #cfe0d6;
+    transition: left 0.16s ease, background 0.16s ease;
+  }
+  .ls-toggle.on { background: #e9b44c; border-color: #e9b44c; }
+  .ls-toggle.on i { left: 23px; background: #10271d; }
+  /* 小眼睛：关掉时换成带斜杠的闭眼 */
+  .eye-btn { width: 44px; display: inline-flex; align-items: center; justify-content: center; }
+  .eye-btn svg { width: 20px; height: 20px; stroke: #cfe0d6; fill: none; stroke-width: 1.6; }
+  .eye-btn .eye-shut { display: none; }
+  .eye-btn.on { border-color: #e9b44c; }
+  .eye-btn.on .eye-open { display: none; }
+  .eye-btn.on .eye-shut { display: inline; stroke: #ffd68a; }
+  .blind-tip { display: none; font-size: 12px; color: #8fa89c; margin-top: -4px; }
+  #listenBox.blind .blind-tip { display: block; }
   /* 随身听是 .drill（z-index 260）盖在最上面，设置面板必须比它更高，否则看不见 */
   #listenCfgModal { z-index: 300; }
   .drill-cn.big {
@@ -1612,6 +1663,10 @@ voter, 选民"></textarea>
   <div class="drill-top">
     <span id="listenProg">1/1</span>
     <div class="drill-top-r">
+      <button class="wbfull-close eye-btn" id="btnListenEye" title="隐藏/显示释义" aria-label="隐藏或显示释义">
+        <svg class="eye-open" viewBox="0 0 24 24"><path d="M2 12s3.7-6.2 10-6.2 10 6.2 10 6.2-3.7 6.2-10 6.2S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg>
+        <svg class="eye-shut" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M2 12s3.7-6.2 10-6.2c1.6 0 3 .4 4.2 1"/><path d="M22 12s-3.7 6.2-10 6.2c-1.5 0-2.9-.4-4-1"/></svg>
+      </button>
       <button class="wbfull-close" id="btnListenCfg">设置</button>
       <button class="wbfull-close" id="btnListenClose">退出</button>
     </div>
@@ -1619,6 +1674,7 @@ voter, 选民"></textarea>
   <div style="text-align:center;padding:0 20px;">
     <div class="drill-word" id="listenWord">word</div>
     <div class="drill-cn" id="listenCn"></div>
+    <div class="blind-tip" id="listenBlindTip">释义已隐藏 · 点右上的小眼睛显示，或点这里临时看一眼</div>
     <div class="drill-ex" id="listenEx"></div>
     <div class="drill-hint" id="listenHint">自动连播中…</div>
   </div>
@@ -1657,6 +1713,12 @@ voter, 选民"></textarea>
         <span class="ls-mode-sub">仅单词</span>
       </button>
     </div>
+    <div class="ls-switch-card">
+      <div class="ls-sw"><span>单词拼读</span><button class="ls-toggle" data-k="spell"><i></i></button></div>
+      <div class="ls-sw"><span>慢速重播例句</span><button class="ls-toggle" data-k="slowEx"><i></i></button></div>
+      <div class="ls-sw"><span>播放单词释义</span><button class="ls-toggle" data-k="sayCn"><i></i></button></div>
+      <div class="ls-sw"><span>播放例句译文</span><button class="ls-toggle" data-k="sayExCn"><i></i></button></div>
+    </div>
     <div class="ls-sec">
       <div class="ls-sec-label">单词播放次数</div>
       <div class="ls-chips" id="lsTimes">
@@ -1675,7 +1737,6 @@ voter, 选民"></textarea>
         <button class="ls-chip" data-rate="1.4">1.4</button>
       </div>
     </div>
-    <div class="ls-tip">倍数只影响随身听的朗读速度，不会改主界面「语速」滑杆。选「无限」会一直重复当前这个词，直到你点「下一个」。</div>
   </div>
 </div>
 
@@ -3217,7 +3278,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.10");
+    bits.push("版本 v1.10.11");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -4942,10 +5003,15 @@ voter, 选民"></textarea>
     let o = {};
     try { o = JSON.parse(localStorage.getItem(LISTEN_CFG_KEY) || "{}") || {}; } catch (e) { o = {}; }
     const savedRate = Number(o.rate);
+    const bool = (v, d) => (typeof v === "boolean" ? v : d);
     return {
       mode: (o.mode === "fast" || o.mode === "adv" || o.mode === "basic") ? o.mode : "basic",
       times: LISTEN_TIMES.indexOf(Number(o.times)) >= 0 ? Number(o.times) : 1,
-      rate: LISTEN_RATES.indexOf(savedRate) >= 0 ? savedRate : 1.0
+      rate: LISTEN_RATES.indexOf(savedRate) >= 0 ? savedRate : 1.0,
+      spell: bool(o.spell, false),        // 单词拼读：一个字母一个字母读
+      slowEx: bool(o.slowEx, false),      // 慢速重播例句
+      sayCn: bool(o.sayCn, true),         // 播放单词释义（中文词义）
+      sayExCn: bool(o.sayExCn, false)     // 播放例句译文
     };
   })();
 
@@ -4975,6 +5041,20 @@ voter, 选民"></textarea>
       [...$("lsRate").querySelectorAll(".ls-chip")].forEach(b => {
         b.classList.toggle("on", Number(b.getAttribute("data-rate")) === listenCfg.rate);
       });
+    }
+    document.querySelectorAll("#listenCfgModal .ls-toggle").forEach(t => {
+      const k = t.getAttribute("data-k");
+      t.classList.toggle("on", !!listenCfg[k]);
+    });
+  }
+
+  function setListenFlag(k, v) {
+    if (["spell", "slowEx", "sayCn", "sayExCn"].indexOf(k) < 0) return;
+    listenCfg[k] = !!v;
+    saveListenCfg(); renderListenCfg();
+    if ($("listenBox") && $("listenBox").classList.contains("show")) {
+      if (listenPlaying) { listenStep(); }
+      else if ($("listenHint")) $("listenHint").innerText = listenHintText();
     }
   }
 
@@ -5045,6 +5125,11 @@ voter, 选民"></textarea>
         setListenRate(b.getAttribute("data-rate"));
       });
     }
+    document.querySelectorAll("#listenCfgModal .ls-toggle").forEach(t => {
+      t.onclick = () => setListenFlag(t.getAttribute("data-k"), !listenCfg[t.getAttribute("data-k")]);
+    });
+    if ($("btnListenEye")) $("btnListenEye").onclick = () => toggleListenBlind();
+    if ($("listenBlindTip")) $("listenBlindTip").onclick = () => peekListenCn();
   }
 
   /* ---------- 随身听：中/英 单独显示 ---------- */
@@ -5055,8 +5140,38 @@ voter, 选民"></textarea>
     } catch (e) { return "both"; }
   })();
 
+  /* ---------- 随身听：小眼睛（隐藏释义，自测用） ---------- */
+  let listenBlind = (function () {
+    try { return localStorage.getItem("pengpengle_listen_blind") === "1"; } catch (e) { return false; }
+  })();
+  let listenPeek = false;      // 隐藏状态下手动看一眼，换词就重新盖上
+
+  function applyListenBlind() {
+    if ($("listenBox")) $("listenBox").classList.toggle("blind", listenBlind && !listenPeek);
+    if ($("btnListenEye")) $("btnListenEye").classList.toggle("on", listenBlind);
+    applyLangMode();
+  }
+
+  function toggleListenBlind() {
+    listenBlind = !listenBlind;
+    listenPeek = false;
+    try { localStorage.setItem("pengpengle_listen_blind", listenBlind ? "1" : "0"); } catch (e) {}
+    applyListenBlind();
+  }
+
+  function peekListenCn() {
+    if (!listenBlind || listenPeek) return;
+    listenPeek = true;
+    applyListenBlind();
+  }
+
   function listenHintText() {
-    const tail = "（" + listenCfgModeName() + "·" + (listenCfg.times === 0 ? "无限次" : listenCfg.times + " 次") + "·" + listenCfg.rate + "×）";
+    const flags = [];
+    if (listenCfg.spell) flags.push("拼读");
+    if (listenCfg.mode === "adv" && listenCfg.slowEx) flags.push("例句慢放");
+    if (listenCfg.sayExCn) flags.push("读译文");
+    const tail = "（" + listenCfgModeName() + "·" + (listenCfg.times === 0 ? "无限次" : listenCfg.times + " 次") + "·" + listenCfg.rate + "×"
+      + (flags.length ? "·" + flags.join("·") : "") + "）";
     if (langMode === "cn") return "只看中文，回想英文…点「暂停」停一下 " + tail;
     if (langMode === "en") return "只看英文…点「暂停」停一下 " + tail;
     return "自动连播中…点「暂停」可以停下来 " + tail;
@@ -5064,9 +5179,10 @@ voter, 选民"></textarea>
 
   function applyLangMode() {
     const wn = $("listenWord"), cn = $("listenCn");
+    const hideCn = (langMode === "en") || (listenBlind && !listenPeek);   // 小眼睛盖上时词义不显示
     if (wn) wn.style.display = (langMode === "cn") ? "none" : "";
     if (cn) {
-      cn.style.display = (langMode === "en") ? "none" : "";
+      cn.style.display = hideCn ? "none" : "";
       cn.classList.toggle("big", langMode === "cn");
     }
     if ($("btnLangCn")) $("btnLangCn").classList.toggle("on", langMode === "cn");
@@ -5074,7 +5190,7 @@ voter, 选民"></textarea>
     const ex = $("listenEx");
     if (ex) {
       const cnLine = ex.querySelector(".drill-ex-cn");
-      if (cnLine) cnLine.style.display = (langMode === "en") ? "none" : "";
+      if (cnLine) cnLine.style.display = ((langMode === "en") || (listenBlind && !listenPeek)) ? "none" : "";
     }
   }
 
@@ -5091,7 +5207,7 @@ voter, 选民"></textarea>
     const cn = document.createElement("div");
     cn.className = "drill-ex-cn";
     cn.innerText = item.excn || "";
-    if (langMode === "en") cn.style.display = "none";
+    if ((langMode === "en") || (listenBlind && !listenPeek)) cn.style.display = "none";
     box.appendChild(en);
     if (item.excn) box.appendChild(cn);
     box.classList.add("show");
@@ -5110,9 +5226,10 @@ voter, 选民"></textarea>
     listenList = (list || wbShown).map(w => ({ en: w.en, cn: w.cn }));
     if (!listenList.length) { toast("这一栏没有词"); return; }
     listenIdx = 0; listenPlaying = true;
+    listenPeek = false;
     if ($("btnListenPlay")) $("btnListenPlay").innerText = "暂停";
     $("listenBox").classList.add("show");
-    applyLangMode();
+    applyListenBlind();
     listenStep();
   }
 
@@ -5125,6 +5242,7 @@ voter, 选民"></textarea>
     $("listenProg").innerText = (listenIdx + 1) + "/" + listenList.length;
     $("listenWord").innerText = w.en;
     $("listenCn").innerText = w.cn || "";
+    if (listenPeek) { listenPeek = false; applyListenBlind(); }   // 换词重新盖上释义
     renderListenEx(w);
     $("listenHint").innerText = (listenCfg.mode === "adv" && !exampleFor(w.en))
       ? listenHintText() + "　这个词没有例句，按基础模式读词义"
@@ -5135,16 +5253,28 @@ voter, 选民"></textarea>
     const infinite = listenCfg.times === 0;
     const times = infinite ? 1 : listenCfg.times;
     const queue = [];
-    for (let i = 0; i < times; i++) queue.push({ t: w.en, kind: "en", r: rate });
+    for (let i = 0; i < times; i++) queue.push({ t: w.en, kind: "en", r: rate, gap: 1050 });
+    // 单词拼读：一个字母一个字母读（英文词才拼）
+    if (listenCfg.spell) {
+      const letters = String(w.en || "").replace(/[^A-Za-z']/g, "").split("");
+      if (letters.length) letters.forEach(L => queue.push({ t: L, kind: "en", r: rate, gap: 520 }));
+    }
+    let cnQueued = false;
     if (listenCfg.mode === "adv") {
       const item = exampleFor(w.en);
-      if (item) queue.push({ t: item.ex, kind: "en", r: rate });     // 进阶：再读一遍英文例句
-      else if (w.cn) queue.push({ t: w.cn, kind: "cn", r: rate });   // 这个词没有例句 → 退回基础（读词义）
-    } else if (listenCfg.mode !== "fast" && w.cn) {
-      queue.push({ t: w.cn, kind: "cn", r: rate });
+      if (item) {
+        queue.push({ t: item.ex, kind: "en", r: rate, gap: 1050 });                              // 例句原速
+        if (listenCfg.slowEx) queue.push({ t: item.ex, kind: "en", r: Math.max(0.6, rate * 0.8), gap: 1200 });  // 慢速重播
+        if (listenCfg.sayExCn && item.excn) queue.push({ t: item.excn, kind: "cn", r: rate, gap: 1050 });         // 例句译文
+      } else if (w.cn && listenCfg.sayCn) {
+        queue.push({ t: w.cn, kind: "cn", r: rate, gap: 1050 });   // 这个词没有例句 → 退回基础（读词义）
+        cnQueued = true;
+      }
+    }
+    if (listenCfg.sayCn && w.cn && !cnQueued) {
+      queue.push({ t: w.cn, kind: "cn", r: rate, gap: 1050 });     // 中文词义（三个模式都听开关的）
     }
 
-    const gap = Math.round(1050 / rate);            // 一句接一句的间隔，倍数越大越紧
     let qi = 0;
 
     const say = (item) => {
@@ -5168,9 +5298,10 @@ voter, 选民"></textarea>
         if (infinite) { qi = 0; }                   // 无限次：一直重复这个词，不往下走
         else { nextWord(); return; }
       }
-      say(queue[qi++]);
+      const item = queue[qi++];
+      say(item);
       clearTimeout(listenTimer);
-      listenTimer = setTimeout(run, gap);
+      listenTimer = setTimeout(run, Math.round((item.gap || 1050) / rate));
     };
     run();
   }
