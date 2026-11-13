@@ -1352,30 +1352,30 @@
   /* 随身听顶部直接切模式（原来的三种模式从设置面板挪到这） */
   .listen-modes {
     position: absolute;
-    top: 58px;
+    top: 68px;
     left: 0;
     right: 0;
     display: flex;
     justify-content: center;
-    gap: 8px;
+    gap: 10px;
     padding: 0 14px;
   }
   .mode-chip {
-    height: 32px;
-    padding: 0 14px;
-    border-radius: 16px;
+    height: 38px;
+    padding: 0 18px;
+    border-radius: 19px;
     border: 1px solid rgba(233, 180, 76, 0.45);
     background: rgba(26, 59, 43, 0.85);
     color: #cfe0d6;
-    font-size: 13px;
+    font-size: 16px;
     font-weight: 700;
   }
   .mode-chip.on { background: #e9b44c; border-color: #e9b44c; color: #10271d; }
   .mode-chip:active { opacity: 0.75; }
-  .mode-chip { display: inline-flex; align-items: center; gap: 5px; }
+  .mode-chip { display: inline-flex; align-items: center; gap: 6px; }
   .mc-arrow {
     font-style: normal;
-    font-size: 10px;
+    font-size: 12px;
     line-height: 1;
     opacity: 0.75;
   }
@@ -1383,7 +1383,7 @@
   .listen-modes.open .mc-arrow { transform: rotate(180deg); }
   .listen-cfg-inline {
     position: absolute;
-    top: 100px;
+    top: 116px;
     left: 10px;
     right: 10px;
     max-width: 520px;
@@ -1715,7 +1715,7 @@ voter, 选民"></textarea>
   <div class="drill-top">
     <span id="listenProg">1/1</span>
     <div class="drill-top-r">
-      <button class="wbfull-close" id="btnListenClose">退出</button>
+      <button class="wbfull-close" id="btnListenClose" aria-label="退出">✕</button>
     </div>
   </div>
   <div class="listen-modes" id="listenModes">
@@ -3306,7 +3306,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.14");
+    bits.push("版本 v1.10.15");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
