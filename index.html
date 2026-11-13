@@ -1357,8 +1357,14 @@
     right: 0;
     display: flex;
     justify-content: center;
+    align-items: center;
     gap: 10px;
     padding: 0 14px;
+  }
+  .mode-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
   .mode-chip {
     height: 38px;
@@ -1369,17 +1375,29 @@
     color: #cfe0d6;
     font-size: 16px;
     font-weight: 700;
+    display: inline-flex;
+    align-items: center;
   }
   .mode-chip.on { background: #e9b44c; border-color: #e9b44c; color: #10271d; }
   .mode-chip:active { opacity: 0.75; }
-  .mode-chip { display: inline-flex; align-items: center; gap: 6px; }
+  /* 箭头单独一颗，摆在对应模式胶囊的右边外侧 */
   .mc-arrow {
-    font-style: normal;
+    width: 30px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid rgba(233, 180, 76, 0.45);
+    border-radius: 19px;
+    background: rgba(26, 59, 43, 0.85);
+    color: #e9b44c;
     font-size: 12px;
     line-height: 1;
-    opacity: 0.75;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.18s ease;
   }
-  .mode-chip.on .mc-arrow { opacity: 1; }
+  .mc-arrow.on { background: #e9b44c; color: #10271d; border-color: #e9b44c; }
+  .mc-arrow:active { opacity: 0.7; }
   .listen-modes.open .mc-arrow { transform: rotate(180deg); }
   .listen-cfg-inline {
     position: absolute;
@@ -1719,9 +1737,18 @@ voter, 选民"></textarea>
     </div>
   </div>
   <div class="listen-modes" id="listenModes">
-    <button class="mode-chip" data-mode="basic">基础<i class="mc-arrow">▾</i></button>
-    <button class="mode-chip" data-mode="adv">进阶<i class="mc-arrow">▾</i></button>
-    <button class="mode-chip" data-mode="fast">速刷<i class="mc-arrow">▾</i></button>
+    <div class="mode-item">
+      <button class="mode-chip" data-mode="basic">基础</button>
+      <button class="mc-arrow" data-mode="basic" aria-label="播放设置">▾</button>
+    </div>
+    <div class="mode-item">
+      <button class="mode-chip" data-mode="adv">进阶</button>
+      <button class="mc-arrow" data-mode="adv" aria-label="播放设置">▾</button>
+    </div>
+    <div class="mode-item">
+      <button class="mode-chip" data-mode="fast">速刷</button>
+      <button class="mc-arrow" data-mode="fast" aria-label="播放设置">▾</button>
+    </div>
   </div>
   <div class="listen-cfg-inline" id="listenCfgPanel">
     <div class="ls-switch-card">
@@ -3305,7 +3332,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.16");
+    bits.push("版本 v1.10.17");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -5184,8 +5211,16 @@ voter, 选民"></textarea>
   function bindListenCfg() {
     if ($("listenModes")) {
       $("listenModes").addEventListener("click", (ev) => {
-        // 点小箭头 = 展开/折叠设置；点胶囊本体 = 换模式
-        if (ev.target.closest && ev.target.closest(".mc-arrow")) { initAudio(); toggleListenCfg(); return; }
+        // 点小箭头 = 展开/折叠设置（箭头属于哪颗胶囊就顺带切到那个模式）；点胶囊本体 = 换模式
+        const a = ev.target.closest ? ev.target.closest(".mc-arrow") : null;
+        if (a) {
+          initAudio();
+          const open = $("listenCfgPanel") && $("listenCfgPanel").classList.contains("show");
+          const m = a.getAttribute("data-mode");
+          if (!open && m) setListenMode(m);
+          toggleListenCfg();
+          return;
+        }
         const b = ev.target.closest ? ev.target.closest(".mode-chip") : null;
         if (!b) return;
         setListenMode(b.getAttribute("data-mode"));
