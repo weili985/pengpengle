@@ -3278,7 +3278,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.11");
+    bits.push("版本 v1.10.12");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -3298,13 +3298,40 @@ voter, 选民"></textarea>
     if ($("ttsDiag")) $("ttsDiag").innerText = ttsStatusText();
   }
 
-  function ttsSpeak(text, tried, rate, lang) {
+  // 估一句朗读大约要多久（引擎不给 onend 时用它兜底，宁可多等一点也别把句子掐断）
+  function estSpeechMs(text, rate) {
+    const t = String(text || "");
+    const cjk = (t.match(/[\u4e00-\u9fa5]/g) || []).length;
+    const en = t.replace(/\s+/g, " ").length;
+    const base = cjk ? (320 + cjk * 330) : (430 + en * 95);
+    const r = (rate && rate > 0) ? rate : 1;
+    return Math.min(20000, Math.round(base / r));
+  }
+
+  // 安卓壳里的原生朗读读完会回一句 window.__ttsDone('utt')，靠它精确排下一句
+  window.__ttsDoneCb = null;
+  window.__ttsDone = function () {
+    const cb = window.__ttsDoneCb;
+    window.__ttsDoneCb = null;
+    if (cb) { try { cb(); } catch (e) {} }
+  };
+
+  function ttsSpeak(text, tried, rate, lang, done) {
+    let finished = false, poll = null;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      if (poll) { clearInterval(poll); poll = null; }
+      if (window.__ttsDoneCb === finish) window.__ttsDoneCb = null;
+      if (done) { try { done(); } catch (e) {} }
+    };
     // 壳里的朗读引擎刚起来时可能还没就绪，这时说一句是静音：等 0.7 秒再补一次，只补一次
     if (window.AndroidTTS && AndroidTTS.isReady && !AndroidTTS.isReady()) {
       if (!tried) {
-        setTimeout(() => { try { ttsSpeak(text, true, rate, lang); } catch (e) {} }, 700);
+        setTimeout(() => { try { ttsSpeak(text, true, rate, lang, done); } catch (e) { finish(); } }, 700);
       } else {
         toast("朗读引擎还没就绪：等几秒再点，或到系统设置里换一个 TTS 引擎");
+        finish();
       }
       return;
     }
@@ -3317,6 +3344,9 @@ voter, 选民"></textarea>
     const utt = new SpeechSynthesisUtterance(text);
     utt.lang = useLang;
     utt.rate = useRate;
+    utt.onend = finish;                 // 真读完了立刻往下走
+    // 注意：onerror 不能当成"读完了"。没装英文语音时引擎会立刻报错但一句没读，
+    // 那时若往下走，后面的句子只会互相顶掉；让它按估算时长等满再切。
     // 选了具体朗读人：就用它，口音跟着它的语言走；没选则按口音自动挑
     const v = wantVoice ? voiceByName(wantVoice) : null;
     if (v) {
@@ -3330,8 +3360,25 @@ voter, 选民"></textarea>
       const plain = new SpeechSynthesisUtterance(text);
       plain.lang = useLang;
       plain.rate = useRate;
-      try { speechSynthesis.speak(plain); } catch (e2) {}
+      plain.onend = finish;
+      try { speechSynthesis.speak(plain); } catch (e2) { finish(); }
     }
+    // 安卓壳里的垫片查不到 speaking、也不会派发 onend：改等原生 TTS 的读完回调
+    let started = false;
+    const inShell = !!window.AndroidTTS;
+    if (inShell) {
+      window.__ttsDoneCb = finish;
+    } else {
+      poll = setInterval(() => {
+        try {
+          if (speechSynthesis.speaking || speechSynthesis.pending) started = true;
+          else if (started) finish();
+        } catch (e) { /* 查不了就不靠它 */ }
+      }, 140);
+    }
+    // 兜底：万一那头一直不回话，也别把随身听卡死（给足余量，正常轮不到它）
+    const backMs = inShell ? Math.round(estSpeechMs(text, useRate) * 1.35 + 700) : (estSpeechMs(text, useRate) + 350);
+    setTimeout(finish, backMs);
   }
 
   // 朗读人列表是异步来的：能监听就监听
@@ -3780,10 +3827,12 @@ voter, 选民"></textarea>
 
   let lastVoiceRoute = "";
 
-  async function speak(text, force, rate) {
+  async function speak(text, force, rate, done) {
+    const fire = () => { if (done) { try { done(); } catch (e) {} } };
     if (!setting.autoRead && !force) {
       lastVoiceRoute = "读词开关关着，没读";
       renderTtsDiag();
+      fire();
       return;
     }
     try {
@@ -3796,6 +3845,7 @@ voter, 选民"></textarea>
           if (played) {
             lastVoiceRoute = "我的录音";
             renderTtsDiag();
+            fire();
             return;                                  // 自己的录音真的放出来了
           }
           lastVoiceRoute = "录音没放出来，改用系统朗读";
@@ -3805,7 +3855,7 @@ voter, 选民"></textarea>
     } catch (e) {
       lastVoiceRoute = "录音库读不了，改用系统朗读";
     }
-    ttsSpeak(text, false, rate);
+    ttsSpeak(text, false, rate, undefined, done);
   }
 
   function shuffle(arr) {
@@ -5253,33 +5303,34 @@ voter, 选民"></textarea>
     const infinite = listenCfg.times === 0;
     const times = infinite ? 1 : listenCfg.times;
     const queue = [];
-    for (let i = 0; i < times; i++) queue.push({ t: w.en, kind: "en", r: rate, gap: 1050 });
+    for (let i = 0; i < times; i++) queue.push({ t: w.en, kind: "en", r: rate, gap: 300 });
     // 单词拼读：一个字母一个字母读（英文词才拼）
     if (listenCfg.spell) {
       const letters = String(w.en || "").replace(/[^A-Za-z']/g, "").split("");
-      if (letters.length) letters.forEach(L => queue.push({ t: L, kind: "en", r: rate, gap: 520 }));
+      if (letters.length) letters.forEach(L => queue.push({ t: L, kind: "en", r: rate, gap: 150 }));
     }
     let cnQueued = false;
     if (listenCfg.mode === "adv") {
       const item = exampleFor(w.en);
       if (item) {
-        queue.push({ t: item.ex, kind: "en", r: rate, gap: 1050 });                              // 例句原速
-        if (listenCfg.slowEx) queue.push({ t: item.ex, kind: "en", r: Math.max(0.6, rate * 0.8), gap: 1200 });  // 慢速重播
-        if (listenCfg.sayExCn && item.excn) queue.push({ t: item.excn, kind: "cn", r: rate, gap: 1050 });         // 例句译文
+        queue.push({ t: item.ex, kind: "en", r: rate, gap: 320 });                              // 例句原速
+        if (listenCfg.slowEx) queue.push({ t: item.ex, kind: "en", r: Math.max(0.6, rate * 0.8), gap: 420 });  // 慢速重播
+        if (listenCfg.sayExCn && item.excn) queue.push({ t: item.excn, kind: "cn", r: rate, gap: 320 });         // 例句译文
       } else if (w.cn && listenCfg.sayCn) {
-        queue.push({ t: w.cn, kind: "cn", r: rate, gap: 1050 });   // 这个词没有例句 → 退回基础（读词义）
+        queue.push({ t: w.cn, kind: "cn", r: rate, gap: 320 });   // 这个词没有例句 → 退回基础（读词义）
         cnQueued = true;
       }
     }
     if (listenCfg.sayCn && w.cn && !cnQueued) {
-      queue.push({ t: w.cn, kind: "cn", r: rate, gap: 1050 });     // 中文词义（三个模式都听开关的）
+      queue.push({ t: w.cn, kind: "cn", r: rate, gap: 320 });     // 中文词义（三个模式都听开关的）
     }
 
     let qi = 0;
 
-    const say = (item) => {
-      if (item.kind === "cn") ttsSpeak(item.t, false, item.r, "zh-CN");   // 中文用中文语音，不走"我的录音"
-      else speak(item.t, true, item.r);
+    // 关键：一句真正读完（onend 或按字数估的时间到）才排下一句，句子不会被下一句掐断
+    const say = (item, cb) => {
+      if (item.kind === "cn") ttsSpeak(item.t, false, item.r, "zh-CN", cb);   // 中文用中文语音，不走"我的录音"
+      else speak(item.t, true, item.r, cb);
     };
 
     const nextWord = () => {
@@ -5289,7 +5340,7 @@ voter, 选民"></textarea>
         listenIdx++;
         if (listenIdx >= listenList.length) { stopListen(true); return; }
         listenStep();
-      }, Math.round(650 / rate));
+      }, Math.round(500 / rate));
     };
 
     const run = () => {
@@ -5299,11 +5350,20 @@ voter, 选民"></textarea>
         else { nextWord(); return; }
       }
       const item = queue[qi++];
-      say(item);
-      clearTimeout(listenTimer);
-      listenTimer = setTimeout(run, Math.round((item.gap || 1050) / rate));
+      const pause = Math.round((item.gap || 260) / rate);   // 句与句之间的小停顿
+      say(item, () => {
+        if (!listenPlaying || tok !== listenSeqTok) return;
+        clearTimeout(listenTimer);
+        listenTimer = setTimeout(run, pause);
+      });
     };
     run();
+  }
+
+  // 把当前正在读的那句掐掉（退出/暂停时别让声音还拖在后面）
+  function stopSpeak() {
+    try { if (window.speechSynthesis && speechSynthesis.cancel) speechSynthesis.cancel(); } catch (e) {}
+    try { if (window.AndroidTTS && typeof AndroidTTS.stop === "function") AndroidTTS.stop(); } catch (e) {}
   }
 
   function listenToggle() {
@@ -5314,6 +5374,7 @@ voter, 选民"></textarea>
     } else {
       listenSeqTok++;                               // 停：把还在排队的句子全部作废
       clearTimeout(listenTimer);
+      stopSpeak();
     }
   }
 
@@ -5327,6 +5388,7 @@ voter, 选民"></textarea>
   function stopListen(done) {
     listenSeqTok++;
     clearTimeout(listenTimer); listenTimer = null; listenPlaying = false;
+    stopSpeak();
     if ($("listenBox")) $("listenBox").classList.remove("show");
     listenList = []; listenIdx = 0;
     if (done) toast("随身听播完了");
