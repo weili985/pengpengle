@@ -1349,6 +1349,29 @@
   }
   .lang-chip.on { background: #e9b44c; border-color: #e9b44c; color: #10271d; }
   .lang-chip:active { opacity: 0.75; }
+  /* 随身听顶部直接切模式（原来的三种模式从设置面板挪到这） */
+  .listen-modes {
+    position: absolute;
+    top: 58px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 14px;
+  }
+  .mode-chip {
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 16px;
+    border: 1px solid rgba(233, 180, 76, 0.45);
+    background: rgba(26, 59, 43, 0.85);
+    color: #cfe0d6;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .mode-chip.on { background: #e9b44c; border-color: #e9b44c; color: #10271d; }
+  .mode-chip:active { opacity: 0.75; }
 
   /* 随身听「播放设置」 */
   .drill-top-r { display: flex; gap: 8px; }
@@ -1671,6 +1694,11 @@ voter, 选民"></textarea>
       <button class="wbfull-close" id="btnListenClose">退出</button>
     </div>
   </div>
+  <div class="listen-modes" id="listenModes">
+    <button class="mode-chip" data-mode="basic">基础</button>
+    <button class="mode-chip" data-mode="adv">进阶</button>
+    <button class="mode-chip" data-mode="fast">速刷</button>
+  </div>
   <div style="text-align:center;padding:0 20px;">
     <div class="drill-word" id="listenWord">word</div>
     <div class="drill-cn" id="listenCn"></div>
@@ -1695,23 +1723,6 @@ voter, 选民"></textarea>
     <div class="ls-title">
       <h3>播放设置</h3>
       <button class="modal-x" id="btnListenCfgClose" aria-label="关闭">✕</button>
-    </div>
-    <div class="ls-modes" id="lsModes">
-      <button class="ls-mode" data-mode="basic">
-        <span class="ls-mode-ico">🐣</span>
-        <span class="ls-mode-name">基础模式</span>
-        <span class="ls-mode-sub">单词 + 词义</span>
-      </button>
-      <button class="ls-mode" data-mode="adv">
-        <span class="ls-mode-ico">🎓</span>
-        <span class="ls-mode-name">进阶模式</span>
-        <span class="ls-mode-sub">单词 + 例句</span>
-      </button>
-      <button class="ls-mode" data-mode="fast">
-        <span class="ls-mode-ico">🚀</span>
-        <span class="ls-mode-name">速刷模式</span>
-        <span class="ls-mode-sub">仅单词</span>
-      </button>
     </div>
     <div class="ls-switch-card">
       <div class="ls-sw"><span>单词拼读</span><button class="ls-toggle" data-k="spell"><i></i></button></div>
@@ -3278,7 +3289,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.12");
+    bits.push("版本 v1.10.13");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -5076,8 +5087,9 @@ voter, 选民"></textarea>
   }
 
   function renderListenCfg() {
-    if ($("lsModes")) {
-      [...$("lsModes").querySelectorAll(".ls-mode")].forEach(b => {
+    const chipBox = $("listenModes") || $("lsModes");
+    if (chipBox) {
+      [...chipBox.querySelectorAll(".mode-chip, .ls-mode")].forEach(b => {
         const m = b.getAttribute("data-mode");
         b.classList.toggle("on", m === listenCfg.mode);
       });
@@ -5152,6 +5164,13 @@ voter, 选民"></textarea>
     if ($("listenCfgModal")) {
       $("listenCfgModal").addEventListener("click", (ev) => {
         if (ev.target === $("listenCfgModal")) closeListenCfg();   // 点面板外面的空白
+      });
+    }
+    if ($("listenModes")) {
+      $("listenModes").addEventListener("click", (ev) => {
+        const b = ev.target.closest ? ev.target.closest(".mode-chip") : null;
+        if (!b) return;
+        setListenMode(b.getAttribute("data-mode"));
       });
     }
     if ($("lsModes")) {
@@ -5279,6 +5298,7 @@ voter, 选民"></textarea>
     listenPeek = false;
     if ($("btnListenPlay")) $("btnListenPlay").innerText = "暂停";
     $("listenBox").classList.add("show");
+    renderListenCfg();               // 顶部模式胶囊按上次的设置点亮
     applyListenBlind();
     listenStep();
   }
