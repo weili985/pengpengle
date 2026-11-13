@@ -3028,7 +3028,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.1");
+    bits.push("版本 v1.10.2");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -5047,6 +5047,19 @@ voter, 选民"></textarea>
     if ($("btnListenNext")) $("btnListenNext").onclick = () => listenMove(1);
     if ($("btnLangCn")) $("btnLangCn").onclick = () => setLangMode("cn");
     if ($("btnLangEn")) $("btnLangEn").onclick = () => setLangMode("en");
+    // 点这两个按钮以外的屏幕空白处 → 中英文全部显示回来
+    if ($("listenBox")) {
+      $("listenBox").addEventListener("click", (ev) => {
+        if (ev.target.closest && ev.target.closest("button")) return;
+        if (langMode !== "both") {
+          langMode = "both";
+          try { localStorage.setItem("pengpengle_langmode", "both"); } catch (e) {}
+          applyLangMode();
+          if ($("listenHint")) $("listenHint").innerText = listenHintText();
+          toast("中英文都显示回来了");
+        }
+      });
+    }
 
     // 听写
     if ($("btnDictClose")) $("btnDictClose").onclick = closeDict;
