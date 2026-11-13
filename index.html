@@ -2557,8 +2557,11 @@ voter, 选民"></textarea>
   let nbGroups = [];   // 多个生词本：[{id,name,words:[{en,cn}]}]
   let nbCurrent = 0;   // 当前选中的那本
   let starPick = null;
-  let lastTap = { idx: -1, t: 0 };   // 双击判定（click 路径）：同一张卡 360ms 内点第二下
-  let lastTapUp = { idx: -1, t: 0 };  // 双击判定（pointerup 路径）：WebView 里更可靠
+  let lastUpKey = "";                // 双击判定：上一张被抬起的卡（idx|词面），1 秒内再抬同一张 = 双击
+  let lastUpT = 0;
+  let lastDblAt = 0;                 // 最近一次双击的时刻，防止 pointerup 与 dblclick 各弹一次
+  let swallowClick = false;          // 双击已经在 pointerup 里处理过，紧接着那一下 click 不再当单击
+  const DBL_MS = 1000;               // 双击窗口：放到 1 秒，手慢的人两次也来得及（同一张卡慢点只会重新选中）
   let pickCard = null;               // 双击选本时，正在安排的那张卡
   let practiceWords = null;
   let pairsBeforePractice = null; // 练生词局前用户选的对数，退出时还原
@@ -3080,7 +3083,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.4");
+    bits.push("版本 v1.10.5");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -3692,18 +3695,28 @@ voter, 选民"></textarea>
       div.onpointerup = () => {
         clearTimeout(lpTimer);
         if (card._longPress) return;                 // 长按看音标，不算双击
-        // 双击判定放在这里：WebView 里第二下可能变成缩放gesture，click 事件不保证来
+        // 双击判定放在这里：WebView 里第二下可能变成缩放手势，click 事件不保证来
         const t2 = Date.now();
-        if (lastTapUp.idx === idx && t2 - lastTapUp.t < 520) {
-          lastTapUp.idx = -1;
+        const key = idx + "|" + card.text;
+        if (lastUpKey === key && t2 - lastUpT < DBL_MS) {
+          lastUpKey = ""; lastUpT = 0; lastDblAt = t2;
+          swallowClick = true;
           dblPickNotebook(card);
           return;
         }
-        lastTapUp = { idx: idx, t: t2 };
+        lastUpKey = key; lastUpT = t2;
       };
       div.onpointerleave = () => clearTimeout(lpTimer);
       div.onpointercancel = () => clearTimeout(lpTimer);
       div.oncontextmenu = (e) => e.preventDefault();
+      // 有些 WebView 只给 dblclick、不给第二下 pointerup，这里再兜一次（400ms 内不重复弹）
+      div.ondblclick = () => {
+        const t3 = Date.now();
+        if (t3 - lastDblAt < 400) return;
+        lastDblAt = t3;
+        swallowClick = true;
+        dblPickNotebook(card);
+      };
       div.onclick = () => clickCard(idx);
       board.appendChild(div);
     });
@@ -3714,15 +3727,7 @@ voter, 选民"></textarea>
     const card = cards[idx];
     if (card.disappear) return;
     if (card._longPress) { card._longPress = false; return; } // 刚才是长按，别当成点选
-
-    // 双击同一张卡：弹"加到哪本生词本"（单击仍然只是选中 + 读词）
-    const nowMs = Date.now();
-    if (lastTap.idx === idx && nowMs - lastTap.t < 520) {
-      lastTap.idx = -1;
-      dblPickNotebook(card);
-      return;
-    }
-    lastTap = { idx: idx, t: nowMs };
+    if (swallowClick) { swallowClick = false; return; }       // 这一下属于刚处理过的双击，别再当单击
     if (selected.length >= 2) return;
 
     if (setting.clickSound) playClickSound(setting.clickStyle);
