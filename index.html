@@ -748,6 +748,29 @@
     color: #a9c2b2;
     margin-bottom: 8px;
   }
+  .nb-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .nb-head h3 { margin: 0; }
+  .modal-x {
+    flex: 0 0 auto;
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    border: 1px solid var(--border-gold);
+    background: rgba(26, 59, 43, 0.9);
+    color: #e9b44c;
+    font-size: 20px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-x:active { opacity: 0.7; }
 
   .nb-list {
     max-height: 44vh;
@@ -1800,10 +1823,13 @@ voter, 选民"></textarea>
 <!-- 生词本 -->
 <div class="modal-mask" id="starModal">
   <div class="modal">
-    <h3>生词本</h3>
+    <div class="nb-head">
+      <h3>生词本</h3>
+      <button class="modal-x" id="btnCloseNb" aria-label="关闭">✕</button>
+    </div>
     <div class="nb-tabs" id="nbTabs"></div>
     <div class="nb-manage">
-      <input class="nb-name-input" id="nbNameInput" maxlength="12" placeholder="生词本名称">
+      <input class="nb-name-input" id="nbNameInput" maxlength="12" placeholder="新名字" style="display:none">
       <button class="btn-small" id="btnNbNew">新建本</button>
       <button class="btn-small" id="btnNbRename">改名</button>
       <button class="btn-small" id="btnNbDel">删本</button>
@@ -1811,14 +1837,12 @@ voter, 选民"></textarea>
     <div class="nb-prac-row">
       <button class="btn" id="btnNbPractice">练这本的单词</button>
     </div>
-    <div class="nb-tip" id="nbTip"></div>
     <div class="nb-list" id="nbList"></div>
     <h4 class="nb-sub">熟词库 <span class="nb-sub-num" id="mrNum">0</span></h4>
     <div class="nb-list" id="mrList"></div>
     <div class="modal-actions">
       <button class="btn" id="btnNbExit" style="display:none">恢复全部词库</button>
       <button class="btn" id="btnNbClear">清空</button>
-      <button class="btn" id="btnCloseNb">关闭</button>
     </div>
   </div>
 </div>
@@ -3056,7 +3080,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.3");
+    bits.push("版本 v1.10.4");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -4135,7 +4159,7 @@ voter, 选民"></textarea>
         <div class="nb-tab${i === nbCurrent ? " on" : ""}" data-idx="${i}">${x.name}<span class="nb-tab-num">${x.words.length}</span></div>`).join("");
     }
     if (!g.words.length) {
-      box.innerHTML = '<div class="nb-empty">「' + g.name + '」还没有词。点一张英文卡（金色★圈起来），再点上面的五角星，就收进这个本里。</div>';
+      box.innerHTML = '<div class="nb-empty">这本还没有词</div>';
     } else {
       box.innerHTML = g.words.map(w => `
         <div class="nb-row" data-en="${w.en.replace(/"/g, "&quot;")}">
@@ -4146,18 +4170,11 @@ voter, 选民"></textarea>
           </div>
         </div>`).join("");
     }
-    if ($("nbTip")) {
-      $("nbTip").innerText = "当前「" + g.name + "」" + g.words.length + " 个词；共 " + nbGroups.length + " 本、合计 " + nbTotal() + " 个词，只存在这台设备上。"
-        + "点上面任意一本书名 = 选中这一本（面板不关）；再按下面那行「练…」的按钮才开始练（至少 2 个词）；"
-        + "★按钮只负责打开这个面板，不会再把词塞进哪一本；"
-        + "双击没收录过的卡片 = 弹出来让你挑收进哪一本；已经收进去的词双击没有任何反应。";
-    }
     if ($("btnNbPractice")) {
       const nm = g.name.length > 5 ? g.name.slice(0, 5) + "…" : g.name;
       $("btnNbPractice").innerText = "练「" + nm + "」的 " + g.words.length + " 个词";
     }
     if ($("btnNbExit")) $("btnNbExit").style.display = practiceWords ? "" : "none";
-    if ($("nbNameInput")) $("nbNameInput").value = g.name;
     renderStarNum();
   }
 
@@ -4219,25 +4236,43 @@ voter, 选民"></textarea>
     }
     if ($("btnNbNew")) {
       $("btnNbNew").onclick = () => {
-        let name = (($("nbNameInput") && $("nbNameInput").value) || "").trim().slice(0, 12);
+        const inp = $("nbNameInput");
+        let name = (inp && inp.style.display !== "none" && (inp.value || "").trim())
+          ? inp.value.trim().slice(0, 12) : "";
         if (!name) name = "分类" + (nbGroups.length + 1);
         while (nbGroups.some(g => g.name === name)) name = name + "2";
         nbGroups.push({ id: nbNewId(), name: name, words: [] });
         nbCurrent = nbGroups.length - 1;
         saveNotebook();
+        if (inp) { inp.style.display = "none"; inp.value = ""; }
         renderNotebookList();
         toast("新建了生词本「" + name + "」");
       };
     }
     if ($("btnNbRename")) {
       $("btnNbRename").onclick = () => {
-        const name = (($("nbNameInput") && $("nbNameInput").value) || "").trim().slice(0, 12);
+        const inp = $("nbNameInput");
+        if (!inp) return;
+        // 第一次点：把输入框放出来并填上当前本名；第二次点（或按回车）：提交改名
+        if (inp.style.display === "none") {
+          inp.style.display = "";
+          inp.value = nbCur().name;
+          try { inp.focus(); inp.select(); } catch (e) {}
+          return;
+        }
+        const name = (inp.value || "").trim().slice(0, 12);
         if (!name) { toast("先在框里写个名字"); return; }
         nbCur().name = name;
         saveNotebook();
+        inp.style.display = "none";
         renderNotebookList();
         toast("这本改名为「" + name + "」");
       };
+    }
+    if ($("nbNameInput")) {
+      $("nbNameInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); if ($("btnNbRename")) $("btnNbRename").click(); }
+      });
     }
     if ($("btnNbDel")) {
       $("btnNbDel").onclick = () => {
