@@ -1753,7 +1753,6 @@ voter, 选民"></textarea>
     <div class="drill-word" id="listenWord">word</div>
     <div class="drill-cn" id="listenCn"></div>
     <div class="drill-ex" id="listenEx"></div>
-    <div class="drill-hint" id="listenHint">自动连播中…</div>
   </div>
   <div class="lang-row">
     <button class="lang-chip" id="btnLangCn" data-lang="cn">中文</button>
@@ -3306,7 +3305,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.15");
+    bits.push("版本 v1.10.16");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -5339,9 +5338,12 @@ voter, 选民"></textarea>
     $("listenCn").innerText = w.cn || "";
     if (listenPeek) { listenPeek = false; applyListenBlind(); }   // 换词重新盖上释义
     renderListenEx(w);
-    $("listenHint").innerText = (listenCfg.mode === "adv" && !exampleFor(w.en))
-      ? listenHintText() + "　这个词没有例句，按基础模式读词义"
-      : listenHintText();
+    // 说明文字已删除，这里只在元素还在时更新
+    if ($("listenHint")) {
+      $("listenHint").innerText = (listenCfg.mode === "adv" && !exampleFor(w.en))
+        ? listenHintText() + "　这个词没有例句，按基础模式读词义"
+        : listenHintText();
+    }
     initAudio();
 
     const rate = listenCfg.rate || 1.0;
