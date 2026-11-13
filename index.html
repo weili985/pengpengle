@@ -1451,9 +1451,7 @@
 <div class="modal-mask" id="wordbookModal">
   <div class="modal">
     <h3>词库管理</h3>
-    <div class="wb-list-title" id="wbListTitle">选择要练的词库（点一下直接开练）</div>
     <div class="wb-list" id="wbList"></div>
-    <div class="wb-text-title">也可以在这里粘贴/编辑词条</div>
     <textarea id="wordInput" style="width:100%;min-height:140px;padding:10px;border-radius:10px;border:1px solid var(--border-gold);background:#153024;color:#fff;resize:vertical;" placeholder="nominate, 提名
 ballot, 选票
 rally, 集会
@@ -1463,17 +1461,11 @@ voter, 选民"></textarea>
     <div class="modal-actions">
       <button class="btn" id="btnImportWord">从文件导入</button>
       <button class="btn" id="btnLoadWord">加载词库</button>
-      <button class="btn" id="btnCloseWord">关闭</button>
+      <button class="btn" id="btnWordDrill" style="background:#e9b44c;border-color:#e9b44c;color:#10271d;">刷题</button>
     </div>
     <input type="file" id="wordFile" accept=".txt,.csv,text/plain,text/csv" multiple style="display:none">
-    <div style="font-size:11px;color:#c8a24a;margin-top:6px;line-height:1.7;cursor:pointer;" id="wbFullHint">
-      双击上面这块粘贴板 → 全屏显示里面的单词 → 点 🎧 进入沉浸式刷题（点这行字也一样进去）
-    </div>
-    <div style="font-size:11px;color:#aaa;margin-top:8px;line-height:1.7;">
-      导入支持 .txt / .csv，一行一条，英文与中文用逗号、制表符或竖线分隔，自动识别 UTF-8 与 GBK 编码。
-    </div>
-    <div class="modal-actions" style="margin-top:8px;">
-      <button class="btn" id="btnResetWord">恢复默认词库</button>
+    <div class="modal-actions" style="margin-top:10px;">
+      <button class="btn" id="btnCloseWord">关闭</button>
     </div>
   </div>
 </div>
@@ -2400,6 +2392,19 @@ voter, 选民"></textarea>
     }
   }
 
+  // 词库内容变了（删词、标熟、放回）时，同步「多份词库」清单里对应的那一份
+  // 不这么做的话，重开 App 会从清单把已标熟的词又灌回词库，看起来像"熟了还在出现"
+  function syncWbListEntry() {
+    try {
+      const cur = wbCurName();
+      if (!cur || cur === "默认词库" || cur === "手动编辑") return;
+      const it = wbList.find(x => x.name === cur);
+      if (!it) return;
+      it.words = wordbook.map(w => ({ en: w.en, cn: w.cn }));
+      saveWbList();
+    } catch (e) {}
+  }
+
   // 开机时让"正在练的词库"与高亮的那一行严格对上：以存下来的词库名为准
   function syncCurrentWordbook() {
     const cur = wbCurName();
@@ -2414,6 +2419,23 @@ voter, 选民"></textarea>
     wordbook = DEFAULT_WORDBOOK.map(w => ({ ...w }));
     saveWordbook();
     try { localStorage.setItem(WBC_KEY, "默认词库"); } catch (e) {}
+  }
+
+  // 开机清一遍：熟词不能留在词库/清单里（否则重开后又跑回牌面和刷题里）
+  function pruneMasteredWords() {
+    const isM = (w) => masteredHas(w.en);
+    if (wordbook.some(isM)) {
+      wordbook = wordbook.filter(w => !isM(w));
+      saveWordbook();
+    }
+    let changed = false;
+    wbList.forEach(it => {
+      if (it.words && it.words.some(isM)) {
+        it.words = it.words.filter(w => !isM(w));
+        changed = true;
+      }
+    });
+    if (changed) saveWbList();
   }
 
   function useWordbook(name, list) {
@@ -2447,10 +2469,16 @@ voter, 选民"></textarea>
     return { list: list, skipped: skipped };
   }
 
+  // 这人当前能用来开局的词：先取生词本临时词或词库，再把「熟」词排除
+  function playPool() {
+    const src = practiceWords ? practiceWords : wordbook;
+    return src.filter(w => !masteredHas(w.en));
+  }
+
   function capacityPairs() {
     // 一个词生成一对牌（英文卡 + 中文卡），所以可用对数就是词数
     // 生词本练习时用生词本里的词算容量
-    return (practiceWords ? practiceWords.length : wordbook.length);
+    return playPool().length;
   }
 
   function saveWordbook() {
@@ -3028,7 +3056,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.2");
+    bits.push("版本 v1.10.3");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -3583,7 +3611,11 @@ voter, 选民"></textarea>
     startTime = Date.now();
     $("resultModal").classList.remove("show");
 
-    const pool = practiceWords ? practiceWords : wordbook;
+    const pool = playPool();
+    if (pool.length < 2) {
+      toast("熟词已经排除，能用的词不够一对；去词库加词，或在生词本里把熟词放回词库");
+      return;
+    }
     const list = shuffle(pool).slice(0, totalPairs);
     cards = [];
 
@@ -3885,6 +3917,7 @@ voter, 选民"></textarea>
     const hadInBook = wordbook.some(w => w.en.toLowerCase() === en.toLowerCase());
     wordbook = wordbook.filter(w => w.en.toLowerCase() !== en.toLowerCase());
     if (hadInBook) saveWordbook();
+    syncWbListEntry();   // 多份词库时同步清单，免得重开后这个词又从清单里回来
     if (practiceWords) practiceWords = practiceWords.filter(w => w.en.toLowerCase() !== en.toLowerCase());
 
     // 牌面上这一对直接消失，并算一次配对，保证这一局还能通关
@@ -3931,6 +3964,7 @@ voter, 选民"></textarea>
     if (w && !wordbook.some(x => x.en.toLowerCase() === w.en.toLowerCase())) {
       wordbook.push({ en: w.en, cn: w.cn });
       saveWordbook();
+      syncWbListEntry();
     }
     refreshPairChips();
     renderMasteredList();
@@ -4589,18 +4623,6 @@ voter, 选民"></textarea>
       if (added === 1 && single) { useWordbook(single.name, single.words); return; }
       toast(bad ? ("导入了 " + added + " 份，有 " + bad + " 个文件没解析到词条") : ("导入了 " + added + " 份词库，点上面列表里的名字就能开练"));
     }
-
-    $("btnResetWord").onclick = () => {
-      wordbook = DEFAULT_WORDBOOK.map(w => ({ ...w }));
-      try { localStorage.removeItem(WB_KEY); } catch (e) {}
-      try { localStorage.setItem(WB_DEFAULT_TAG, WB_DEFAULT_VER); } catch (e) {}
-      $("wordInput").value = wordbook.map(w => `${w.en},${w.cn}`).join("\n");
-      try { localStorage.setItem(WBC_KEY, "默认词库"); } catch (e) {}
-      renderWbList();
-      refreshPairChips();
-      startGame();
-      toast("已恢复默认词库（" + wordbook.length + " 条）");
-    };
   }
 
   /* ---------- 全屏看词表 + 沉浸式翻卡刷题 ---------------------------- */
@@ -4642,15 +4664,22 @@ voter, 选民"></textarea>
     }
   }
 
-  // 双击词库里那块粘贴板：把里面的词条摊成整屏清单
+  // 「刷题」按钮进这张词表：用正在练的词库（不是粘贴框里可能过期的文本），
+  // 再把熟词并进来占「已标熟」那一栏；练习动作会自动跳过熟词
   function openWbFull() {
-    const ta = $("wordInput");
-    const parsed = parseWordbookText(ta ? ta.value : "");
-    wbFullWords = parsed.list;
-    if (!wbFullWords.length) { toast("粘贴板里还没有词条：一行一条「英文, 中文」"); return; }
+    const base = (practiceWords ? practiceWords : wordbook).map(w => ({ en: w.en, cn: w.cn }));
+    const learned = mastered.filter(m => !base.some(w => w.en.toLowerCase() === String(m.en).toLowerCase()))
+      .map(m => ({ en: m.en, cn: m.cn }));
+    wbFullWords = base.concat(learned);
+    if (!wbFullWords.length) { toast("词库里还没有词条：一行一条「英文, 中文」"); return; }
     wbFilter = "all";
     renderWbFull();
     $("wbFull").classList.add("show");
+  }
+
+  // 这一栏里真正拿来练的词：熟词一律跳过
+  function practiceShown() {
+    return wbShown.filter(w => wbStatusOf(w) !== "done");
   }
 
   function closeWbFull() { if ($("wbFull")) $("wbFull").classList.remove("show"); }
@@ -5020,10 +5049,10 @@ voter, 选民"></textarea>
     }
 
     // 底部五格
-    if ($("btnFnDrill")) $("btnFnDrill").onclick = () => { initAudio(); startDrill(wbShown); };
-    if ($("btnFnListen")) $("btnFnListen").onclick = () => { initAudio(); startListen(wbShown); };
-    if ($("btnFnDict")) $("btnFnDict").onclick = () => { initAudio(); startDict(wbShown); };
-    if ($("btnFnSpell")) $("btnFnSpell").onclick = () => { initAudio(); startSpell(wbShown); };
+    if ($("btnFnDrill")) $("btnFnDrill").onclick = () => { initAudio(); startDrill(practiceShown()); };
+    if ($("btnFnListen")) $("btnFnListen").onclick = () => { initAudio(); startListen(practiceShown()); };
+    if ($("btnFnDict")) $("btnFnDict").onclick = () => { initAudio(); startDict(practiceShown()); };
+    if ($("btnFnSpell")) $("btnFnSpell").onclick = () => { initAudio(); startSpell(practiceShown()); };
     if ($("btnFnExport")) $("btnFnExport").onclick = () => { initAudio(); openExport(); };
 
     // 沉浸刷词
@@ -5105,22 +5134,22 @@ voter, 选民"></textarea>
     if ($("btnExportCopy")) $("btnExportCopy").onclick = exportCopy;
     if ($("btnExportSave")) $("btnExportSave").onclick = exportSave;
 
-    const ta = $("wordInput");
-    if (ta) {
-      ta.ondblclick = (e) => { e.preventDefault(); openWbFull(); };
-      // 手机上 WebView 不一定给 dblclick：自己数两次抬手
-      let lastUp = 0;
-      ta.addEventListener("pointerup", (e) => {
-        if (e.pointerType === "mouse") return;
-        const t = Date.now();
-        if (t - lastUp < 430) { lastUp = 0; openWbFull(); return; }
-        lastUp = t;
-      });
+    // 「刷题」按钮：一步进刷题——先在全屏词表上开局（退出刷题就落在这张词表上，
+    // 还能继续用随身听/听写/随手拼/导出），不再依赖"双击粘贴板"
+    if ($("btnWordDrill")) {
+      $("btnWordDrill").onclick = () => {
+        initAudio();
+        if (setting.clickSound) playClickSound(setting.clickStyle);
+        $("wordbookModal").classList.remove("show");
+        openWbFull();
+        setTimeout(() => { startDrill(practiceShown()); }, 120);
+      };
     }
   }
 
   loadWbList();
   syncCurrentWordbook();
+  pruneMasteredWords();
   bindEvents();
   bindStarEvents();
   bindWbFullEvents();
