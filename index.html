@@ -2561,6 +2561,7 @@ voter, 选民"></textarea>
   let lastUpT = 0;
   let lastDblAt = 0;                 // 最近一次双击的时刻，防止 pointerup 与 dblclick 各弹一次
   let swallowClick = false;          // 双击已经在 pointerup 里处理过，紧接着那一下 click 不再当单击
+  let swallowClickAt = 0;            // 双击那一瞬间的时刻；600ms 内任何 click 都在捕获阶段吃掉（防止落到刚弹出的面板上）
   const DBL_MS = 1000;               // 双击窗口：放到 1 秒，手慢的人两次也来得及（同一张卡慢点只会重新选中）
   let pickCard = null;               // 双击选本时，正在安排的那张卡
   let practiceWords = null;
@@ -3083,7 +3084,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.6");
+    bits.push("版本 v1.10.7");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -3700,7 +3701,7 @@ voter, 选民"></textarea>
         const key = idx + "|" + card.text;
         if (lastUpKey === key && t2 - lastUpT < DBL_MS) {
           lastUpKey = ""; lastUpT = 0; lastDblAt = t2;
-          swallowClick = true;
+          swallowClick = true; swallowClickAt = t2;
           dblPickNotebook(card);
           return;
         }
@@ -3714,7 +3715,7 @@ voter, 选民"></textarea>
         const t3 = Date.now();
         if (t3 - lastDblAt < 400) return;
         lastDblAt = t3;
-        swallowClick = true;
+        swallowClick = true; swallowClickAt = t3;
         dblPickNotebook(card);
       };
       div.onclick = () => clickCard(idx);
@@ -4345,6 +4346,15 @@ voter, 选民"></textarea>
   }
 
   function bindEvents() {
+    // 双击后立刻弹出的面板会盖在手指下面：那次抬手带出来的 click 绝不能再落到面板的按钮上
+    // （否则就成了"双击一下就自己收进某一本"）。这里在捕获阶段把这一下吃掉。
+    document.addEventListener("click", (ev) => {
+      if (swallowClickAt && Date.now() - swallowClickAt < 600) {
+        ev.stopPropagation();
+        ev.preventDefault();
+      }
+    }, true);
+
     $("volSlider").oninput = () => {
       $("volPercent").innerText = $("volSlider").value + "%";
     };
