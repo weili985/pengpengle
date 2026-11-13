@@ -1282,6 +1282,35 @@
     padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
   }
   .drill-btns .btn { height: 48px; font-size: 14px; }
+  .lang-row {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 82px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding: 0 14px;
+  }
+  .lang-chip {
+    min-width: 96px;
+    height: 40px;
+    border-radius: 20px;
+    border: 1px solid rgba(233, 180, 76, 0.55);
+    background: rgba(26, 59, 43, 0.9);
+    color: #cfe0d6;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .lang-chip.on { background: #e9b44c; border-color: #e9b44c; color: #10271d; }
+  .lang-chip:active { opacity: 0.75; }
+  .drill-cn.big {
+    margin-top: 0;
+    font-size: 40px;
+    font-weight: 800;
+    line-height: 1.25;
+    word-break: break-word;
+  }
   #btnDrillNo { background: #4a2323; border-color: #b4574f; }
   #btnDrillYes { background: #2f6b4f; border-color: #e9b44c; }
   .spell-tile {
@@ -1497,6 +1526,10 @@ voter, 选民"></textarea>
     <div class="drill-word" id="listenWord">word</div>
     <div class="drill-cn" id="listenCn"></div>
     <div class="drill-hint" id="listenHint">自动连播中…</div>
+  </div>
+  <div class="lang-row">
+    <button class="lang-chip" id="btnLangCn" data-lang="cn">中文</button>
+    <button class="lang-chip" id="btnLangEn" data-lang="en">英文</button>
   </div>
   <div class="drill-btns">
     <button class="btn" id="btnListenPrev">◀ 上一个</button>
@@ -2995,7 +3028,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.0");
+    bits.push("版本 v1.10.1");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -4676,12 +4709,47 @@ voter, 选民"></textarea>
   /* ---------- 随身听：一条条自动连播 ---------- */
   let listenList = [], listenIdx = 0, listenTimer = null, listenPlaying = false;
 
+  /* ---------- 随身听：中/英 单独显示 ---------- */
+  let langMode = (function () {
+    try {
+      const v = localStorage.getItem("pengpengle_langmode");
+      return (v === "cn" || v === "en") ? v : "both";
+    } catch (e) { return "both"; }
+  })();
+
+  function listenHintText() {
+    if (langMode === "cn") return "只看中文，回想英文…自动连播中，点「暂停」停一下";
+    if (langMode === "en") return "只看英文，自动连播中…点「暂停」停一下";
+    return "自动连播中…点「暂停」可以停下来";
+  }
+
+  function applyLangMode() {
+    const wn = $("listenWord"), cn = $("listenCn");
+    if (wn) wn.style.display = (langMode === "cn") ? "none" : "";
+    if (cn) {
+      cn.style.display = (langMode === "en") ? "none" : "";
+      cn.classList.toggle("big", langMode === "cn");
+    }
+    if ($("btnLangCn")) $("btnLangCn").classList.toggle("on", langMode === "cn");
+    if ($("btnLangEn")) $("btnLangEn").classList.toggle("on", langMode === "en");
+  }
+
+  function setLangMode(m) {
+    langMode = (langMode === m) ? "both" : m;   // 再点一次同一个按钮 = 取消，回到全部显示
+    try { localStorage.setItem("pengpengle_langmode", langMode); } catch (e) {}
+    applyLangMode();
+    if ($("listenBox") && $("listenBox").classList.contains("show")) {
+      if ($("listenHint")) $("listenHint").innerText = listenHintText();
+    }
+  }
+
   function startListen(list) {
     listenList = (list || wbShown).map(w => ({ en: w.en, cn: w.cn }));
     if (!listenList.length) { toast("这一栏没有词"); return; }
     listenIdx = 0; listenPlaying = true;
     if ($("btnListenPlay")) $("btnListenPlay").innerText = "暂停";
     $("listenBox").classList.add("show");
+    applyLangMode();
     listenStep();
   }
 
@@ -4692,7 +4760,7 @@ voter, 选民"></textarea>
     $("listenProg").innerText = (listenIdx + 1) + "/" + listenList.length;
     $("listenWord").innerText = w.en;
     $("listenCn").innerText = w.cn;
-    $("listenHint").innerText = "自动连播中…点「暂停」可以停下来";
+    $("listenHint").innerText = listenHintText();
     initAudio();
     speak(w.en, true);
     clearTimeout(listenTimer);
@@ -4977,6 +5045,8 @@ voter, 选民"></textarea>
     if ($("btnListenPlay")) $("btnListenPlay").onclick = listenToggle;
     if ($("btnListenPrev")) $("btnListenPrev").onclick = () => listenMove(-1);
     if ($("btnListenNext")) $("btnListenNext").onclick = () => listenMove(1);
+    if ($("btnLangCn")) $("btnLangCn").onclick = () => setLangMode("cn");
+    if ($("btnLangEn")) $("btnLangEn").onclick = () => setLangMode("en");
 
     // 听写
     if ($("btnDictClose")) $("btnDictClose").onclick = closeDict;
@@ -5041,6 +5111,7 @@ voter, 选民"></textarea>
   bindEvents();
   bindStarEvents();
   bindWbFullEvents();
+  applyLangMode();
   loadSettingUI();
   refreshPairChips();
   startGame();
