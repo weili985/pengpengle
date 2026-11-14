@@ -2216,11 +2216,20 @@ voter, 选民"></textarea>
           <option value="longbell">喜钟长鸣</option>
         </select>
       </div>
+      <div class="select-row">
+        <span>音效发声通道</span>
+        <select class="setting-select" id="selSoundChannel">
+          <option value="wav">稳妥（系统播放器，最可能出声）</option>
+          <option value="auto">自动（网页音频优先，坏了自动换）</option>
+          <option value="web">网页音频（音色最丰富）</option>
+        </select>
+      </div>
       <div class="btn-row">
         <button class="btn-small" id="btnTestClick">试听点击</button>
         <button class="btn-small" id="btnTestSuccess">试听成功</button>
         <button class="btn-small" id="btnTestFail">试听失败</button>
       </div>
+      <div class="voice-hint" id="soundTestInfo" style="margin-top:8px;">点上面任一「试听」，这里会写出这次音效走了哪条通道、有没有被系统拒绝；拼写/听写/配对响的时候也会记在这里。</div>
       <div style="margin-top:6px;color:#9fb8ab;font-size:12px;line-height:1.5;">
         「成功」同时用于配对成功、随手拼拼对、听写答对；「失败」用于配对失败、拼错、写错。挑哪种，三处一起变。
       </div>
@@ -3202,7 +3211,8 @@ voter, 选民"></textarea>
     clickStyle: "drop",
     successStyle: "stardust",
     failStyle: "down",
-    winStyle: "horn"
+    winStyle: "horn",
+    soundChannel: "wav"
   };
   let setting = Object.assign({}, defaultSetting, JSON.parse(localStorage.getItem("pengpengle_setting")) || {});
   const SUCCESS_STYLES = ["stardust", "wow", "sparkle", "chime", "bright", "triumph", "glide", "stack", "harp"];
@@ -3293,31 +3303,55 @@ voter, 选民"></textarea>
       if (!beepWavUp) beepWavUp = makeBeepWav(true);
       if (!beepWavDown) beepWavDown = makeBeepWav(false);
       const url = up ? beepWavUp : beepWavDown;
-      if (!url) return;
+      if (!url) { setFx("wav", false, "生成音频失败"); return; }
       const a = new Audio(url);
+      a.setAttribute("playsinline", "");
+      a.preload = "auto";
       const v = (typeof setting.volume === "number" && isFinite(setting.volume)) ? setting.volume : 1.2;
       a.volume = Math.max(0, Math.min(1, v / 1.5));
+      a.onplaying = function () { setFx("wav", true); };
+      a.onerror = function () { setFx("wav", false, "音频解码失败"); };
+      setFx("wav", true, "已交给系统播放器");
       const p = a.play();
-      if (p && p.catch) p.catch(function () {});
-    } catch (e) {}
+      if (p && p.catch) p.catch(function (e) { setFx("wav", false, (e && e.name) ? e.name : String(e)); });
+    } catch (e) { setFx("wav", false, String(e)); }
   }
 
-  // 主入口：网页音频能跑就用选定的音效风格，跑不动就直接出声（WAV 兜底）
+  // 主入口：按 setting.soundChannel 选通道。wav = 系统播放器播现做 WAV（最稳），web = 网页音频风格，auto = 网页音频能跑就用风格、否则换 WAV
+  let lastFx = null;
+  function setFx(ch, ok, err) {
+    lastFx = { ch: ch, ok: ok, err: err || "", t: Date.now() };
+    if (typeof updateSoundTestInfo === "function") updateSoundTestInfo();
+  }
   function playFx(kind, style) {
+    // 音量太小等于没声：对错音强制保底 0.6，播完再把用户原来的值还回去
+    const rawVol = (typeof setting.volume === "number" && isFinite(setting.volume)) ? setting.volume : 1.2;
+    const needBoost = rawVol < 0.6;
+    if (needBoost) {
+      setting.volume = 0.9;
+      setTimeout(function () { setting.volume = rawVol; }, 1400);
+    }
+    const ch = setting.soundChannel || "wav";
+    const useWav = ch === "wav" || (ch === "auto" && (!audioCtx || audioCtx.state !== "running"));
+    if (useWav) { beepPlay(kind !== "fail"); return; }
     const run = function () {
       try {
-        if (audioCtx && audioCtx.state === "running") {
-          if (kind === "success") { playSuccessSound(style); return; }
-          if (kind === "fail") { playFailSound(style); return; }
-          if (kind === "win") { playWinSound(style); return; }
-        }
-      } catch (e) {}
+        if (kind === "success") { setFx("web", true); playSuccessSound(style); return; }
+        if (kind === "fail") { setFx("web", true); playFailSound(style); return; }
+        if (kind === "win") { setFx("web", true); playWinSound(style); return; }
+      } catch (e) {
+        beepPlay(kind !== "fail");
+        return;
+      }
       beepPlay(kind !== "fail");
     };
     initAudio();
     if (audioCtx && audioCtx.state === "suspended") {
       try { audioCtx.resume(); } catch (e) {}
-      setTimeout(run, 60);
+      setTimeout(function () {
+        if (!audioCtx || audioCtx.state !== "running") beepPlay(kind !== "fail");
+        else run();
+      }, 60);
     } else {
       run();
     }
@@ -3797,7 +3831,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.22");
+    bits.push("版本 v1.10.23");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -3810,12 +3844,29 @@ voter, 选民"></textarea>
     }
     if (setting.voiceName) bits.push("指定朗读人：" + setting.voiceName);
     bits.push("音效引擎：" + (audioCtx ? audioCtx.state : "还没初始化（点一下屏幕再试听）"));
+    bits.push("音效通道：" + (({ wav: "系统播放器", web: "网页音频", auto: "自动" })[setting.soundChannel || "wav"] || "系统播放器"));
+    if (lastFx) bits.push("最近音效：" + (lastFx.ch === "wav" ? "系统播放器" : "网页音频") + (lastFx.ok ? " 已启动" : " 失败（" + lastFx.err + "）"));
     bits.push("最近一次：" + (lastVoiceRoute || "还没读过"));
     return bits.join("　|　");
   }
 
   function renderTtsDiag() {
     if ($("ttsDiag")) $("ttsDiag").innerText = ttsStatusText();
+  }
+
+  // 试听结果落到脸上：走了哪条通道、有没有被系统拒绝、当前音量多少
+  function updateSoundTestInfo() {
+    const box = $("soundTestInfo");
+    if (!box) return;
+    if (!lastFx) { box.innerText = "点上面任一「试听」，这里会写出这次音效走了哪条通道、有没有被系统拒绝；拼写/听写/配对响的时候也会记在这里。"; return; }
+    const pct = Math.round(((typeof setting.volume === "number" && isFinite(setting.volume)) ? setting.volume : 1.2) * 100);
+    const chName = lastFx.ch === "wav" ? "系统播放器(WAV)" : "网页音频";
+    const okName = lastFx.ok ? "已启动" : "被拒绝/失败";
+    let s = "上次音效：" + chName + " · " + okName + (lastFx.err ? "（" + lastFx.err + "）" : "") + " · 音量 " + pct + "% · " + new Date(lastFx.t).toLocaleTimeString("zh-CN", { hour12: false });
+    if (pct < 30) s += "　⚠ 音量太低，先把滑块拉到 80% 以上";
+    if (!lastFx.ok) s += "　⚠ 这条通道被系统拦了，换成另一条通道再试";
+    else s += "　如果这一点声音都没有，就是手机媒体音量为 0 或开了静音/勿扰";
+    box.innerText = s;
   }
 
   // 估一句朗读大约要多久（引擎不给 onend 时用它兜底，宁可多等一点也别把句子掐断）
@@ -4529,7 +4580,7 @@ voter, 选民"></textarea>
 
     if (cardA.pair === cardB.text && cardB.pair === cardA.text) {
       setTimeout(() => {
-        if (setting.matchSuccess) playFx("success", setting.successStyle);
+        playFx("success", setting.successStyle);
         cardA.disappear = true;
         cardB.disappear = true;
         starPick = null;
@@ -4547,7 +4598,7 @@ voter, 选民"></textarea>
         }
       }, 280);
     } else {
-      if (setting.matchFail) playFx("fail", setting.failStyle);
+      playFx("fail", setting.failStyle);
       combo = 0;
       updateInfo();
       document.querySelectorAll(".card").forEach(el => {
@@ -4597,6 +4648,8 @@ voter, 选民"></textarea>
     $("selSuccessStyle").value = setting.successStyle;
     $("selFailStyle").value = setting.failStyle;
     $("selWinStyle").value = setting.winStyle;
+    if ($("selSoundChannel")) $("selSoundChannel").value = setting.soundChannel || "wav";
+    updateSoundTestInfo();
     refreshVoiceOptions();
     renderTtsDiag();
   }
@@ -4616,6 +4669,7 @@ voter, 选民"></textarea>
     setting.successStyle = $("selSuccessStyle").value;
     setting.failStyle = $("selFailStyle").value;
     setting.winStyle = $("selWinStyle").value;
+    if ($("selSoundChannel")) setting.soundChannel = $("selSoundChannel").value;
     saveSettingToLocal();
   }
 
@@ -5174,7 +5228,7 @@ voter, 选民"></textarea>
       const ui = getUISetting();
       const oldVol = setting.volume;
       setting.volume = ui.volume;
-      playSuccessSound(ui.successStyle);
+      playFx("success", ui.successStyle);
       setting.volume = oldVol;
     };
     $("btnTestFail").onclick = () => {
@@ -5182,7 +5236,7 @@ voter, 选民"></textarea>
       const ui = getUISetting();
       const oldVol = setting.volume;
       setting.volume = ui.volume;
-      playFailSound(ui.failStyle);
+      playFx("fail", ui.failStyle);
       setting.volume = oldVol;
     };
     $("btnTestMatch").onclick = () => {
@@ -6090,11 +6144,11 @@ voter, 选民"></textarea>
     dictDone = true;
     if (v === w.en.toLowerCase()) {
       $("dictTips").innerText = "✔ 写对了：" + w.en;
-      if (setting.matchSuccess !== false) playFx("success", setting.successStyle);
+      playFx("success", setting.successStyle);
     } else {
       if (!dictMiss.some(x => x.en === w.en)) dictMiss.push(w);
       $("dictTips").innerText = "✘ 正确拼写：" + w.en;
-      if (setting.matchFail !== false) playFx("fail", setting.failStyle);
+      playFx("fail", setting.failStyle);
     }
     setTimeout(() => {
       dictIdx++;
@@ -6190,12 +6244,12 @@ voter, 选民"></textarea>
     spellDone = true;
     if (built.toLowerCase() === String(w.en).toLowerCase()) {
       $("spellCn").innerText = "✔ 拼对了：" + w.en;
-      if (setting.matchSuccess !== false) playFx("success", setting.successStyle);
+      playFx("success", setting.successStyle);
       setTimeout(() => { nextSpell(false); }, 900);
     } else {
       if (!spellMiss.some(x => x.en === w.en)) spellMiss.push(w);
       $("spellCn").innerText = "✘ 正确：" + w.en;
-      if (setting.matchFail !== false) playFx("fail", setting.failStyle);
+      playFx("fail", setting.failStyle);
       setTimeout(() => { nextSpell(true); }, 1600);
     }
   }
