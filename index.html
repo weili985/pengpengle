@@ -1976,9 +1976,6 @@ voter, 选民"></textarea>
   <div class="drill-top">
     <span id="spellProg">1/1</span>
     <div class="drill-top-r">
-      <button class="drill-gear" id="btnSpellCfg" aria-label="设置" title="设置">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.23 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.24.41.48.41h3.84c.23 0 .43-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.08-.47-.12-.61l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-      </button>
       <button class="wbfull-close" id="btnSpellClose" aria-label="退出">✕</button>
     </div>
   </div>
@@ -3165,23 +3162,57 @@ voter, 选民"></textarea>
     failStyle: "down",
     winStyle: "horn"
   };
-  let setting = JSON.parse(localStorage.getItem("pengpengle_setting")) || {...defaultSetting};
+  let setting = Object.assign({}, defaultSetting, JSON.parse(localStorage.getItem("pengpengle_setting")) || {});
+  const SUCCESS_STYLES = ["stardust", "wow", "sparkle", "chime", "bright", "triumph", "glide", "stack", "harp"];
+  const FAIL_STYLES = ["down", "thud", "warn", "buzz", "sigh", "lowbuzz", "doublefall"];
 
   function saveSettingToLocal() {
     localStorage.setItem("pengpengle_setting", JSON.stringify(setting));
   }
 
   function initAudio() {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === "suspended") {
-      audioCtx.resume();
-    }
+    try {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === "suspended") {
+        try { audioCtx.resume(); } catch (e) {}
+      }
+      if (!audioCtx.__warmed) {
+        audioCtx.__warmed = true;
+        try {
+          const b = audioCtx.createBuffer(1, 1, audioCtx.sampleRate);
+          const s = audioCtx.createBufferSource();
+          s.buffer = b;
+          s.connect(audioCtx.destination);
+          s.start(0);
+        } catch (e) {}
+      }
+    } catch (e) {}
   }
+  // 任何一次真实触摸/点击都顺手把音频上下文解冻（安卓 WebView 里只认用户手势）
+  ["pointerdown", "touchstart", "click"].forEach(function (ev) {
+    document.addEventListener(ev, function () { initAudio(); }, { capture: true, passive: true });
+  });
 
   function vol(v) {
-    return Math.max(0, Math.min(1.5, v * setting.volume));
+    const m = (typeof setting.volume === "number" && isFinite(setting.volume)) ? setting.volume : 1.2;
+    return Math.max(0, Math.min(1.5, v * m));
+  }
+
+  // 安卓 WebView 里音频上下文可能仍是 suspended：先 resume 再稍等一拍播，免得音被吞掉
+  function playWhenReady(fn) {
+    try {
+      initAudio();
+      if (audioCtx && audioCtx.state === "suspended") {
+        try { audioCtx.resume(); } catch (e) {}
+        setTimeout(fn, 40);
+      } else {
+        fn();
+      }
+    } catch (e) {
+      try { fn(); } catch (e2) {}
+    }
   }
 
   function playClickSound(style) {
@@ -3283,6 +3314,7 @@ voter, 选民"></textarea>
   }
 
   function playSuccessSound(style) {
+    if (SUCCESS_STYLES.indexOf(style) < 0) style = "stardust";
     if (!audioCtx) return;
     const t = audioCtx.currentTime;
     if (style === "stardust") {
@@ -3412,6 +3444,7 @@ voter, 选民"></textarea>
   }
 
   function playFailSound(style) {
+    if (FAIL_STYLES.indexOf(style) < 0) style = "down";
     if (!audioCtx) return;
     const t = audioCtx.currentTime;
     if (style === "down") {
@@ -3656,7 +3689,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.20");
+    bits.push("版本 v1.10.21");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -3668,6 +3701,7 @@ voter, 选民"></textarea>
       bits.push("浏览器英文朗读人：" + availableVoices().length + " 个");
     }
     if (setting.voiceName) bits.push("指定朗读人：" + setting.voiceName);
+    bits.push("音效引擎：" + (audioCtx ? audioCtx.state : "还没初始化（点一下屏幕再试听）"));
     bits.push("最近一次：" + (lastVoiceRoute || "还没读过"));
     return bits.join("　|　");
   }
@@ -4387,7 +4421,7 @@ voter, 选民"></textarea>
 
     if (cardA.pair === cardB.text && cardB.pair === cardA.text) {
       setTimeout(() => {
-        if (setting.matchSuccess) playSuccessSound(setting.successStyle);
+        if (setting.matchSuccess) playWhenReady(function () { playSuccessSound(setting.successStyle); });
         cardA.disappear = true;
         cardB.disappear = true;
         starPick = null;
@@ -4405,7 +4439,7 @@ voter, 选民"></textarea>
         }
       }, 280);
     } else {
-      if (setting.matchFail) playFailSound(setting.failStyle);
+      if (setting.matchFail) playWhenReady(function () { playFailSound(setting.failStyle); });
       combo = 0;
       updateInfo();
       document.querySelectorAll(".card").forEach(el => {
@@ -5931,11 +5965,11 @@ voter, 选民"></textarea>
     dictDone = true;
     if (v === w.en.toLowerCase()) {
       $("dictTips").innerText = "✔ 写对了：" + w.en;
-      try { if (setting.matchSuccess !== false) { initAudio(); playSuccessSound(setting.successStyle); } } catch (e) {}
+      if (setting.matchSuccess !== false) playWhenReady(function () { playSuccessSound(setting.successStyle); });
     } else {
       if (!dictMiss.some(x => x.en === w.en)) dictMiss.push(w);
       $("dictTips").innerText = "✘ 正确拼写：" + w.en;
-      try { if (setting.matchFail !== false) { initAudio(); playFailSound(setting.failStyle); } } catch (e) {}
+      if (setting.matchFail !== false) playWhenReady(function () { playFailSound(setting.failStyle); });
     }
     setTimeout(() => {
       dictIdx++;
@@ -6031,12 +6065,12 @@ voter, 选民"></textarea>
     spellDone = true;
     if (built.toLowerCase() === String(w.en).toLowerCase()) {
       $("spellCn").innerText = "✔ 拼对了：" + w.en;
-      try { if (setting.matchSuccess !== false) { initAudio(); playSuccessSound(setting.successStyle); } } catch (e) {}
+      if (setting.matchSuccess !== false) playWhenReady(function () { playSuccessSound(setting.successStyle); });
       setTimeout(() => { nextSpell(false); }, 900);
     } else {
       if (!spellMiss.some(x => x.en === w.en)) spellMiss.push(w);
       $("spellCn").innerText = "✘ 正确：" + w.en;
-      try { if (setting.matchFail !== false) { initAudio(); playFailSound(setting.failStyle); } } catch (e) {}
+      if (setting.matchFail !== false) playWhenReady(function () { playFailSound(setting.failStyle); });
       setTimeout(() => { nextSpell(true); }, 1600);
     }
   }
@@ -6246,13 +6280,6 @@ voter, 选民"></textarea>
     if ($("btnSpellCheck")) $("btnSpellCheck").onclick = spellCheck;
     if ($("btnSpellPrev")) $("btnSpellPrev").onclick = spellPrev;
     if ($("btnSpellNext")) $("btnSpellNext").onclick = spellNext;
-    if ($("btnSpellCfg")) {
-      $("btnSpellCfg").onclick = () => {
-        loadSettingUI();
-        const m = $("settingModal");
-        if (m) { m.classList.add("over-drill"); m.classList.add("show"); }
-      };
-    }
     if ($("spellTiles")) {
       $("spellTiles").onclick = (ev) => {
         const t = ev.target.closest ? ev.target.closest(".spell-tile") : null;
