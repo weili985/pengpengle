@@ -1481,6 +1481,46 @@
   }
   .lang-chip.on { background: #e9b44c; border-color: #e9b44c; color: #10271d; }
   .lang-chip:active { opacity: 0.75; }
+  .lang-row .lang-chip { min-width: 0; flex: 1; max-width: 118px; padding: 0 6px; }
+  .lang-again { border-color: rgba(233, 180, 76, 0.35); color: #e9b44c; }
+  /* 随身听中间的卡片：细金边圆角，词最大、音标绿、释义居中 */
+  .listen-card {
+    margin: 26px 18px 0;
+    padding: 30px 16px 26px;
+    border: 1px solid rgba(233, 180, 76, 0.34);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.02);
+    text-align: center;
+  }
+  .listen-card .drill-word {
+    font-size: 42px;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+  }
+  .listen-ipa {
+    margin-top: 10px;
+    font-size: 15px;
+    color: #8fbfa0;
+    letter-spacing: 0.6px;
+    min-height: 18px;
+  }
+  .listen-card .drill-cn { font-size: 17px; margin-top: 14px; }
+  .listen-card .drill-ex {
+    background: transparent;
+    border: 0;
+    border-top: 1px solid rgba(233, 180, 76, 0.18);
+    border-radius: 0;
+    padding: 14px 2px 0;
+    margin-top: 16px;
+    max-width: none;
+  }
+  .btn.solid {
+    background: #e9b44c;
+    border-color: #e9b44c;
+    color: #12271c;
+    font-weight: 800;
+    box-shadow: 0 2px 10px rgba(233, 180, 76, 0.22);
+  }
   /* 随身听顶部直接切模式（原来的三种模式从设置面板挪到这） */
   .listen-modes {
     position: absolute;
@@ -1926,18 +1966,20 @@ voter, 选民"></textarea>
       </div>
     </div>
   </div>
-  <div style="text-align:center;padding:0 20px;">
+  <div class="listen-card" id="listenCard">
     <div class="drill-word" id="listenWord">word</div>
+    <div class="listen-ipa" id="listenIpa"></div>
     <div class="drill-cn" id="listenCn"></div>
     <div class="drill-ex" id="listenEx"></div>
   </div>
   <div class="lang-row">
-    <button class="lang-chip" id="btnLangCn" data-lang="cn">中文</button>
-    <button class="lang-chip" id="btnLangEn" data-lang="en">英文</button>
+    <button class="lang-chip" id="btnLangCn" data-lang="cn">只看中文</button>
+    <button class="lang-chip" id="btnLangEn" data-lang="en">只看英文</button>
+    <button class="lang-chip lang-again" id="btnListenAgain">再读一遍</button>
   </div>
   <div class="drill-btns">
     <button class="btn" id="btnListenPrev">◀ 上一个</button>
-    <button class="btn" id="btnListenPlay">暂停</button>
+    <button class="btn solid" id="btnListenPlay">暂停</button>
     <button class="btn" id="btnListenNext">下一个 ▶</button>
   </div>
 </div>
@@ -3215,6 +3257,72 @@ voter, 选民"></textarea>
     }
   }
 
+  // ===== 兜底发声：网页音频被系统/WebView 卡死时，改用 MediaPlayer 播一段现做的 WAV =====
+  function makeBeepWav(up) {
+    const sr = 22050, dur = 0.55, n = Math.floor(sr * dur);
+    const buf = new Float32Array(n);
+    const notes = up ? [[660, 0.00], [880, 0.13], [1175, 0.26]] : [[330, 0.00], [233, 0.17]];
+    notes.forEach(function (nt) {
+      const f = nt[0], s0 = Math.floor(nt[1] * sr);
+      const len = Math.floor((up ? 0.30 : 0.36) * sr);
+      for (let i = 0; i < len && s0 + i < n; i++) {
+        const t = i / sr;
+        const env = Math.exp(-t * (up ? 9 : 6));
+        buf[s0 + i] += Math.sin(2 * Math.PI * f * t) * env * (up ? 0.55 : 0.62);
+      }
+    });
+    const bytes = 44 + n * 2;
+    const dv = new DataView(new ArrayBuffer(bytes));
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, "RIFF"); dv.setUint32(4, bytes - 8, true); w(8, "WAVE"); w(12, "fmt ");
+    dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+    dv.setUint32(24, sr, true); dv.setUint32(28, sr * 2, true); dv.setUint16(32, 2, true);
+    dv.setUint16(34, 16, true); w(36, "data"); dv.setUint32(40, n * 2, true);
+    for (let i = 0; i < n; i++) {
+      let s = Math.max(-1, Math.min(1, buf[i]));
+      dv.setInt16(44 + i * 2, s * 32767, true);
+    }
+    let bin = "";
+    const u8 = new Uint8Array(dv.buffer);
+    for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
+    try { return "data:audio/wav;base64," + btoa(bin); } catch (e) { return ""; }
+  }
+  let beepWavUp = null, beepWavDown = null;
+  function beepPlay(up) {
+    try {
+      if (!beepWavUp) beepWavUp = makeBeepWav(true);
+      if (!beepWavDown) beepWavDown = makeBeepWav(false);
+      const url = up ? beepWavUp : beepWavDown;
+      if (!url) return;
+      const a = new Audio(url);
+      const v = (typeof setting.volume === "number" && isFinite(setting.volume)) ? setting.volume : 1.2;
+      a.volume = Math.max(0, Math.min(1, v / 1.5));
+      const p = a.play();
+      if (p && p.catch) p.catch(function () {});
+    } catch (e) {}
+  }
+
+  // 主入口：网页音频能跑就用选定的音效风格，跑不动就直接出声（WAV 兜底）
+  function playFx(kind, style) {
+    const run = function () {
+      try {
+        if (audioCtx && audioCtx.state === "running") {
+          if (kind === "success") { playSuccessSound(style); return; }
+          if (kind === "fail") { playFailSound(style); return; }
+          if (kind === "win") { playWinSound(style); return; }
+        }
+      } catch (e) {}
+      beepPlay(kind !== "fail");
+    };
+    initAudio();
+    if (audioCtx && audioCtx.state === "suspended") {
+      try { audioCtx.resume(); } catch (e) {}
+      setTimeout(run, 60);
+    } else {
+      run();
+    }
+  }
+
   function playClickSound(style) {
     if (!audioCtx) return;
     const t = audioCtx.currentTime;
@@ -3689,7 +3797,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.21");
+    bits.push("版本 v1.10.22");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -4421,7 +4529,7 @@ voter, 选民"></textarea>
 
     if (cardA.pair === cardB.text && cardB.pair === cardA.text) {
       setTimeout(() => {
-        if (setting.matchSuccess) playWhenReady(function () { playSuccessSound(setting.successStyle); });
+        if (setting.matchSuccess) playFx("success", setting.successStyle);
         cardA.disappear = true;
         cardB.disappear = true;
         starPick = null;
@@ -4439,7 +4547,7 @@ voter, 选民"></textarea>
         }
       }, 280);
     } else {
-      if (setting.matchFail) playWhenReady(function () { playFailSound(setting.failStyle); });
+      if (setting.matchFail) playFx("fail", setting.failStyle);
       combo = 0;
       updateInfo();
       document.querySelectorAll(".card").forEach(el => {
@@ -5764,6 +5872,7 @@ voter, 选民"></textarea>
     const wn = $("listenWord"), cn = $("listenCn");
     const hideCn = (langMode === "en") || (listenBlind && !listenPeek);   // 小眼睛盖上时词义不显示
     if (wn) wn.style.display = (langMode === "cn") ? "none" : "";
+    if ($("listenIpa")) $("listenIpa").style.display = (langMode === "cn") ? "none" : "";
     if (cn) {
       cn.style.display = hideCn ? "none" : "";
       cn.classList.toggle("big", langMode === "cn");
@@ -5825,6 +5934,11 @@ voter, 选民"></textarea>
     clearTimeout(listenTimer);
     $("listenProg").innerText = (listenIdx + 1) + "/" + listenList.length;
     $("listenWord").innerText = w.en;
+    const ipaEl = $("listenIpa");
+    if (ipaEl) {
+      const ipa = ipaOf(w.en, w);
+      ipaEl.innerText = ipa ? "/ " + ipa + " /" : "";
+    }
     $("listenCn").innerText = w.cn || "";
     if (listenPeek) { listenPeek = false; applyListenBlind(); }   // 换词重新盖上释义
     renderListenEx(w);
@@ -5915,6 +6029,17 @@ voter, 选民"></textarea>
     }
   }
 
+  // 再读一遍：把当前这个词从头重播（不换词、不往下走）
+  function listenAgain() {
+    if (!listenList.length) return;
+    listenSeqTok++;                                 // 作废旧计时器
+    clearTimeout(listenTimer);
+    stopSpeak();
+    listenPlaying = true;
+    if ($("btnListenPlay")) $("btnListenPlay").innerText = "暂停";
+    listenStep();
+  }
+
   function listenMove(d) {
     listenIdx = Math.max(0, Math.min(listenList.length - 1, listenIdx + d));
     listenPlaying = true;
@@ -5965,11 +6090,11 @@ voter, 选民"></textarea>
     dictDone = true;
     if (v === w.en.toLowerCase()) {
       $("dictTips").innerText = "✔ 写对了：" + w.en;
-      if (setting.matchSuccess !== false) playWhenReady(function () { playSuccessSound(setting.successStyle); });
+      if (setting.matchSuccess !== false) playFx("success", setting.successStyle);
     } else {
       if (!dictMiss.some(x => x.en === w.en)) dictMiss.push(w);
       $("dictTips").innerText = "✘ 正确拼写：" + w.en;
-      if (setting.matchFail !== false) playWhenReady(function () { playFailSound(setting.failStyle); });
+      if (setting.matchFail !== false) playFx("fail", setting.failStyle);
     }
     setTimeout(() => {
       dictIdx++;
@@ -6065,12 +6190,12 @@ voter, 选民"></textarea>
     spellDone = true;
     if (built.toLowerCase() === String(w.en).toLowerCase()) {
       $("spellCn").innerText = "✔ 拼对了：" + w.en;
-      if (setting.matchSuccess !== false) playWhenReady(function () { playSuccessSound(setting.successStyle); });
+      if (setting.matchSuccess !== false) playFx("success", setting.successStyle);
       setTimeout(() => { nextSpell(false); }, 900);
     } else {
       if (!spellMiss.some(x => x.en === w.en)) spellMiss.push(w);
       $("spellCn").innerText = "✘ 正确：" + w.en;
-      if (setting.matchFail !== false) playWhenReady(function () { playFailSound(setting.failStyle); });
+      if (setting.matchFail !== false) playFx("fail", setting.failStyle);
       setTimeout(() => { nextSpell(true); }, 1600);
     }
   }
@@ -6232,6 +6357,7 @@ voter, 选民"></textarea>
     if ($("btnListenNext")) $("btnListenNext").onclick = () => listenMove(1);
     if ($("btnLangCn")) $("btnLangCn").onclick = () => setLangMode("cn");
     if ($("btnLangEn")) $("btnLangEn").onclick = () => setLangMode("en");
+    if ($("btnListenAgain")) $("btnListenAgain").onclick = listenAgain;
     // 点这两个按钮以外的屏幕空白处 → 中英文全部显示回来
     if ($("listenBox")) {
       $("listenBox").addEventListener("click", (ev) => {
