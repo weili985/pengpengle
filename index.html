@@ -1678,6 +1678,24 @@
     line-height: 1;
   }
   .spell-tile.used { opacity: 0.22; }
+  .spell-tiles-wrap { position: relative; }
+  .spell-tiles-wrap #spellTiles { padding: 0 62px 0 0; box-sizing: border-box; }
+  .spell-del {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    border: 1px solid rgba(233, 180, 76, 0.6);
+    background: #1c4030;
+    color: #e9b44c;
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .spell-del:active { background: #265039; }
   .drill-end { display: none; text-align: center; width: 100%; }
   .drill-end.show { display: block; }
   .drill-end .btn-row { margin-top: 26px; padding: 0 22px; }
@@ -1967,7 +1985,10 @@ voter, 选民"></textarea>
   <div id="spellMain" style="width:100%;padding:0 18px;box-sizing:border-box;text-align:center;">
     <div class="drill-cn" id="spellCn" style="margin-top:0;font-size:26px;"></div>
     <div id="spellSlots" style="min-height:56px;margin:16px 0;font-size:28px;font-weight:800;color:#e6d7ff;letter-spacing:6px;"></div>
-    <div id="spellTiles" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;"></div>
+    <div class="spell-tiles-wrap">
+      <div id="spellTiles" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;"></div>
+      <button class="spell-del" id="spellDel" aria-label="退格" title="退格（删掉一个字母）">←</button>
+    </div>
   </div>
   <div class="drill-end" id="spellEnd">
     <div class="drill-word">拼完了</div>
@@ -3635,7 +3656,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.19");
+    bits.push("版本 v1.10.20");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -6220,6 +6241,7 @@ voter, 选民"></textarea>
       };
     }
     if ($("btnSpellBack")) $("btnSpellBack").onclick = spellBack;
+    if ($("spellDel")) $("spellDel").onclick = spellBack;
     if ($("btnSpellSkip")) $("btnSpellSkip").onclick = spellSkip;
     if ($("btnSpellCheck")) $("btnSpellCheck").onclick = spellCheck;
     if ($("btnSpellPrev")) $("btnSpellPrev").onclick = spellPrev;
