@@ -1161,17 +1161,131 @@
     padding: 12px 14px 136px;
   }
   .wbfull-row {
+    display: block;
+    padding: 0;
+    margin-bottom: 2px;
+    background: transparent;
+    border-radius: 0;
+    border-bottom: 1px solid rgba(233, 180, 76, 0.12);
+    transition: background 0.15s ease;
+  }
+  .wbfull-row.open {
+    background: rgba(233, 180, 76, 0.14);
+    border-radius: 11px;
+    border-bottom-color: transparent;
+    position: relative;
+  }
+  .wbfull-row .wf-main {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 10px 13px;
-    margin-bottom: 8px;
-    background: rgba(255, 255, 255, 0.07);
-    border-radius: 11px;
+    padding: 14px 13px 14px 14px;
   }
-  .wbfull-row .wf-en { color: #d7c4ff; font-weight: 700; font-size: 16px; }
-  .wbfull-row .wf-cn { color: #cfe3d9; font-size: 14px; text-align: right; }
+  .wbfull-row .wf-en {
+    color: #d7c4ff;
+    font-weight: 800;
+    font-size: 17px;
+    letter-spacing: 0.3px;
+    word-break: break-word;
+  }
+  .wbfull-row.open .wf-en { color: #e9b44c; }
+  .wbfull-row .wf-cn { display: none; }
+  .wbfull-row .wf-more { display: none; }
+  .wbfull-row.open .wf-more { display: block; padding: 0 14px 14px; }
+  .wbfull-row .wf-ipa {
+    display: inline-block;
+    color: #8fa89c;
+    font-size: 13px;
+    margin-bottom: 6px;
+    letter-spacing: 0.2px;
+  }
+  .wbfull-row .wf-ipa.empty { color: #8a705a; }
+  .wbfull-row.open .wf-cn {
+    display: block;
+    color: #e6dcc6;
+    font-size: 15px;
+    line-height: 1.5;
+    padding-right: 92px;
+  }
+  .wbfull-row .wf-star,
+  .wbfull-row .wf-speak {
+    position: absolute;
+    bottom: 12px;
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(233, 180, 76, 0.35);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.18);
+    font-size: 16px;
+    line-height: 1;
+    display: none;
+    align-items: center;
+    justify-content: center;
+  }
+  .wbfull-row .wf-star { right: 12px; color: rgba(233, 180, 76, 0.55); }
+  .wbfull-row .wf-speak { right: 54px; color: #e9b44c; font-size: 15px; }
+  .wbfull-row.open .wf-star,
+  .wbfull-row.open .wf-speak { display: flex; }
+  .wbfull-row .wf-star.on {
+    background: #e9b44c;
+    border-color: #e9b44c;
+    color: #12271c;
+  }
+  /* 释义弹窗：音标缺失时就地补录 */
+  .ipa-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 6px 0 2px;
+  }
+  .ipa-add input {
+    width: 196px;
+    padding: 7px 10px;
+    border-radius: 9px;
+    border: 1px solid var(--border-gold);
+    background: #153024;
+    color: #fff;
+    font-size: 13px;
+    text-align: center;
+  }
+  .ipa-add button {
+    padding: 7px 12px;
+    border-radius: 9px;
+    border: 1px solid var(--border-gold);
+    background: #2f4b3c;
+    color: #e9d39b;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  /* 随手拼：顶部多一颗设置齿轮 */
+  .drill-top-r {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .drill-gear {
+    width: 38px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    border: 1px solid rgba(233, 180, 76, 0.55);
+    background: transparent;
+    color: #e9b44c;
+  }
+  .drill-gear svg { width: 18px; height: 18px; fill: currentColor; }
+  /* 随手拼：左右翻词 */
+  .spell-nav {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+  }
+  .spell-nav .btn { flex: 1; }
+  /* 从练习面板打开的设置要压在最上层 */
+  #settingModal.over-drill { z-index: 330; }
   /* 状态筛选（全部/未学习/复习中/已标熟） */
   .wb-tabs {
     display: flex;
@@ -1326,6 +1440,16 @@
     gap: 8px;
     padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
   }
+  .spell-btns-col {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .spell-acts {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+  .spell-acts .btn { flex: 1; }
   .drill-btns .btn { height: 48px; font-size: 14px; }
   .lang-row {
     position: absolute;
@@ -1825,7 +1949,12 @@ voter, 选民"></textarea>
 <div class="drill" id="spellBox">
   <div class="drill-top">
     <span id="spellProg">1/1</span>
-    <button class="wbfull-close" id="btnSpellClose">退出</button>
+    <div class="drill-top-r">
+      <button class="drill-gear" id="btnSpellCfg" aria-label="设置" title="设置">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.23 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.24.41.48.41h3.84c.23 0 .43-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.08-.47-.12-.61l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+      </button>
+      <button class="wbfull-close" id="btnSpellClose" aria-label="退出">✕</button>
+    </div>
   </div>
   <div id="spellMain" style="width:100%;padding:0 18px;box-sizing:border-box;text-align:center;">
     <div class="drill-cn" id="spellCn" style="margin-top:0;font-size:26px;"></div>
@@ -1840,10 +1969,16 @@ voter, 选民"></textarea>
       <button class="btn" id="btnSpellExit">结束</button>
     </div>
   </div>
-  <div class="drill-btns" id="spellBtns">
-    <button class="btn" id="btnSpellBack">撤销</button>
-    <button class="btn" id="btnSpellSkip">跳过</button>
-    <button class="btn" id="btnSpellCheck">检查</button>
+  <div class="drill-btns spell-btns-col" id="spellBtns">
+    <div class="spell-nav">
+      <button class="btn" id="btnSpellPrev">◀ 上一个</button>
+      <button class="btn" id="btnSpellNext">下一个 ▶</button>
+    </div>
+    <div class="spell-acts">
+      <button class="btn" id="btnSpellBack">撤销</button>
+      <button class="btn" id="btnSpellSkip">跳过</button>
+      <button class="btn" id="btnSpellCheck">检查</button>
+    </div>
   </div>
 </div>
 
@@ -2105,6 +2240,10 @@ voter, 选民"></textarea>
   <div class="ipa-card">
     <div class="ipa-word" id="ipaWord"></div>
     <div class="ipa-ph" id="ipaPh"></div>
+    <div class="ipa-add" id="ipaAdd" style="display:none">
+      <input id="ipaAddInput" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="填音标，例 ˈtriːtmənt">
+      <button id="btnIpaAdd">保存</button>
+    </div>
     <div class="ipa-cn" id="ipaCn"></div>
     <div class="ipa-tip">点一下屏幕关闭</div>
   </div>
@@ -2565,6 +2704,144 @@ voter, 选民"></textarea>
     "settlement": "ˈsɛtəlmənt",
     "litigation": "ˌlɪtəˈgeɪʃən"
   };
+  // 补充音标：内置 210 词以外、常见新闻/时事/科技词。查不到的词可在词库里补第三列，
+  // 或在释义弹窗里就地填一次（填过就存进词库，永久生效）。
+  const IPA_EXTRA = {
+    "treatment": "ˈtriːtmənt",
+    "accuse": "əˈkjuːz",
+    "exonerate": "ˈɛksəˌneɪt",
+    "flood": "fluːd",
+    "endorse": "ɪnˈdɔːrs",
+    "verify": "ˈvɛrɪfaɪ",
+    "disclose": "dɪsˈkloʊz",
+    "surveillance": "sərˈveɪləns",
+    "innovation": "ˌɪnəˈveɪʃən",
+    "deploy": "dɪˈplɔɪ",
+    "generative": "ˈdʒɛnərətɪv",
+    "inference": "ˈɪnfərəns",
+    "open source": "ˈoʊpən sɔːrs",
+    "proprietary": "proʊpriˈɛtəri",
+    "regulatory": "ˈrɛgjələˌtɔːri",
+    "bot": "bɑːt",
+    "tariff": "ˈtærɪf",
+    "sanction": "ˈsæŋkʃən",
+    "treaty": "ˈtriːti",
+    "summit": "ˈsʌmɪt",
+    "diplomat": "ˈdɪpləˌmæt",
+    "embassy": "ˈɛmbəsi",
+    "consulate": "ˈkɑːnsələt",
+    "referendum": "ˌrɛfəˈrɛndəm",
+    "impeach": "ɪmˈpiːtʃ",
+    "indict": "ɪnˈdaɪt",
+    "verdict": "ˈvɜːrdɪkt",
+    "testify": "ˈtɛstəˌfaɪ",
+    "witness": "ˈwɪtnəs",
+    "subpoena": "səˈpiːnə",
+    "lobbyist": "ˈlɑːbiɪst",
+    "grassroots": "ˈgræsˌruːts",
+    "gridlock": "ˈgrɪdlɑːk",
+    "filibuster": "ˈfɪləˌbʌstər",
+    "gerrymander": "ˈgɛriˌmændər",
+    "swing state": "swɪŋ steɪt",
+    "electoral": "ɪˈlɛktərəl",
+    "electorate": "ˈɛləktɔːrət",
+    "turnout": "ˈtɜːrnaʊt",
+    "landslide": "ˈlændslaɪd",
+    "incumbent": "ɪnˈkʌmbənt",
+    "challenger": "ˈtʃælɪndʒər",
+    "frontrunner": "ˈfrʌntˌrʌnər",
+    "platform": "ˈplætfɔːrm",
+    "manifesto": "mænɪˈfɛstoʊ",
+    "policy": "ˈpɑːləsi",
+    "legislation": "ˌlɛdʒɪsˈleɪʃən",
+    "amendment": "əˈmɛndmənt",
+    "clause": "klɔːz",
+    "ratify": "ˈrætəˌfaɪ",
+    "veto": "ˈviːtoʊ",
+    "override": "ˌoʊvərˈraɪd",
+    "cabinet": "ˈkæbɪnət",
+    "ministry": "ˈmɪnɪstri",
+    "spokesperson": "ˈspoʊksˌpɜːrsən",
+    "briefing": "ˈbriːfɪŋ",
+    "leak": "liːk",
+    "whistleblower": "ˈwɪsəlˌbloʊər",
+    "scandal": "ˈskændəl",
+    "corruption": "kəˈrʌpʃən",
+    "bribery": "ˈbraɪbəri",
+    "fraud": "frɔːd",
+    "audit": "ˈɔːdɪt",
+    "subsidy": "ˈsʌbsədi",
+    "stimulus": "ˈstɪmjələs",
+    "inflation": "ɪnˈfleɪʃən",
+    "recession": "rɪˈsɛʃən",
+    "austerity": "ɔːˈstɛrəti",
+    "deficit": "ˈdɛfɪsɪt",
+    "surplus": "ˈsɜːrpləs",
+    "revenue": "rɪˈvɛnjuː",
+    "budget": "ˈbʌdʒɪt",
+    "fiscal": "ˈfɪskəl",
+    "monetary": "məˈnɛtəri",
+    "currency": "ˈkɜːrənsi",
+    "commodity": "kəˈmɑːdəti",
+    "prosperity": "prɑːˈspɛrəti",
+    "welfare": "ˈwɛlfɛr",
+    "pension": "ˈpɛnʃən",
+    "healthcare": "ˈhɛlθˌkɛr",
+    "immigration": "ˌɪmɪˈgreɪʃən",
+    "refugee": "ˈrɛfjuːdʒi",
+    "asylum": "əˈsaɪləm",
+    "border": "ˈbɔːrdər",
+    "deport": "dɪˈpɔːrt",
+    "citizenship": "ˈsɪtɪzənʃɪp",
+    "census": "ˈsɛnsəs",
+    "demographic": "dɪˈmɑːgræfɪk",
+    "urban": "ˈɜːrbən",
+    "rural": "ˈrʊrəl",
+    "infrastructure": "ˌɪnfrəˈstrʌktʃər",
+    "transportation": "trænsˈpɔːrteɪʃən",
+    "logistics": "ləˈdʒɪstɪks",
+    "supply chain": "səˈplaɪ tʃeɪn",
+    "shortage": "ˈʃɔːrtɪdʒ",
+    "pandemic": "pænˈdɛmɪk",
+    "vaccine": "vækˈsiːn",
+    "quarantine": "ˈkwærənˌtiːn",
+    "outbreak": "ˈaʊtˌbreɪk",
+    "climate": "ˈklaɪmət",
+    "emission": "ɪˈmɪʃən",
+    "renewable": "rɪˈnuːəbəl",
+    "sustainability": "səˈsteɪnəˈbɪləti",
+    "deforestation": "diːˌfɔːrɪˈsteɪʃən",
+    "drought": "drɔːt",
+    "wildfire": "ˈwaɪldˌfaɪər",
+    "hostage": "ˈhɑːstɪdʒ",
+    "ceasefire": "ˈsiːsˌfaɪər",
+    "insurgent": "ɪnˈsɜːrdʒənt",
+    "militant": "ˈmɪlɪtənt",
+    "artillery": "ˈɑːrtələri",
+    "airstrike": "ˈɛrˌstraɪk",
+    "coalition": "koʊəˈlɪʃən",
+    "alliance": "əˈlaɪəns",
+    "neutral": "ˈnjuːtrəl",
+    "sovereignty": "ˌsoʊvəˈreɪnəti",
+    "territory": "ˈtɛrəˌtɔːri",
+    "autonomy": "ɔːˈtɑːnəmi",
+    "diaspora": "daɪˈæspərə"
+  };
+  function ipaKey(s) { return String(s || "").trim().toLowerCase(); }
+  // 自选音标：词库里第三列带进来的、或者弹窗里手填的，都落在这一层，永久有效
+  let IPA_OVR = {};
+  try { IPA_OVR = JSON.parse(localStorage.getItem("pengpengle_ipa") || "{}") || {}; } catch (e) { IPA_OVR = {}; }
+  function saveIpaOvr() {
+    try { localStorage.setItem("pengpengle_ipa", JSON.stringify(IPA_OVR)); } catch (e) {}
+  }
+  function ipaOf(en, entry) {
+    const k = ipaKey(en);
+    if (entry && entry.ipa) return String(entry.ipa).trim();
+    if (IPA_OVR[k]) return String(IPA_OVR[k]).trim();
+    if (IPA_MAP[k]) return IPA_MAP[k];
+    if (IPA_EXTRA[k]) return IPA_EXTRA[k];
+    return "";
+  }
   const WB_KEY = "pengpengle_wordbook";
   const WB_DEFAULT_TAG = "pengpengle_wb_default_v";
   const WB_DEFAULT_VER = "210-2026-11-12"; // 内置词库版本号：换了就说明加了新词
@@ -2733,11 +3010,26 @@ voter, 选民"></textarea>
       let parts = raw.split(/\t|,|，|\||;|；/);
       if (parts.length < 2) parts = raw.split(/\s+/);
       const en = (parts[0] || "").trim();
-      const cn = parts.slice(1).join(" ").trim();
+      // 支持第三列写音标：英文, 中文, ˈtriːtmənt
+      // 判据：第三列必须"像音标"（含 IPA 专用符号或斜杠），否则仍然按老规矩把后面都当中文，
+      // 免得"candidate, 候选人, 竞选者"这种中文顿号被误当成音标
+      let cn = "";
+      let ipa = "";
+      const tail = (parts[2] || "").replace(/^\/\s*/, "").replace(/\s*\/$/, "").trim();
+      const ipaLike = /[ˈˌəɪʊʃʒŋθðæɑɒʌɔɛɜɚɝː]/.test(tail);
+      if (parts.length >= 3 && ipaLike) {
+        cn = (parts[1] || "").trim();
+        ipa = tail;
+      } else {
+        cn = parts.slice(1).join(" ").trim();
+      }
       if (!en || !cn) { skipped++; return; }
       if (list.some(w => w.en.toLowerCase() === en.toLowerCase())) { skipped++; return; }
-      list.push({ en: en, cn: cn });
+      const item = { en: en, cn: cn };
+      if (ipa) { item.ipa = ipa; IPA_OVR[ipaKey(en)] = ipa; }
+      list.push(item);
     });
+    saveIpaOvr();
     return { list: list, skipped: skipped };
   }
 
@@ -3332,7 +3624,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.17");
+    bits.push("版本 v1.10.18");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -4225,12 +4517,31 @@ voter, 选民"></textarea>
     if (!card) return;
     const en = card.type === "en" ? card.text : card.pair;
     const cn = card.type === "en" ? card.pair : card.text;
-    const ph = IPA_MAP[String(en).toLowerCase()] || "";
+    const ph = ipaOf(en);
     if ($("ipaWord")) $("ipaWord").innerText = en;
-    if ($("ipaPh")) $("ipaPh").innerText = ph ? ("/ " + ph + " /") : "（自建词暂无音标）";
+    if ($("ipaPh")) $("ipaPh").innerText = ph ? ("/ " + ph + " /") : "";
+    if ($("ipaPh")) $("ipaPh").style.display = ph ? "block" : "none";
+    if ($("ipaAdd")) $("ipaAdd").style.display = ph ? "none" : "flex";
+    if ($("ipaAddInput") && !ph) $("ipaAddInput").value = "";
     if ($("ipaCn")) $("ipaCn").innerText = cn || "";
     const mask = $("ipaMask");
-    if (mask) mask.classList.add("show");
+    if (mask) { mask.dataset.en = en; mask.classList.add("show"); }
+  }
+
+  // 弹窗里补的音标：写进音标覆盖表，同名词以后一直有效
+  function saveIpaFromInput() {
+    const mask = $("ipaMask");
+    const en = mask ? mask.dataset.en : "";
+    const raw = $("ipaAddInput") ? $("ipaAddInput").value : "";
+    const ipa = String(raw).replace(/^\/\s*/, "").replace(/\s*\/$/, "").trim();
+    if (!en) return;
+    if (!ipa) { toast("先把音标填上，例如 ˈtriːtmənt"); return; }
+    IPA_OVR[ipaKey(en)] = ipa;
+    saveIpaOvr();
+    if ($("ipaPh")) { $("ipaPh").innerText = "/ " + ipa + " /"; $("ipaPh").style.display = "block"; }
+    if ($("ipaAdd")) $("ipaAdd").style.display = "none";
+    renderWbFull();
+    toast("音标已保存：" + en + " / " + ipa + " /");
   }
 
   function closeIpa() {
@@ -4539,7 +4850,18 @@ voter, 选民"></textarea>
         masterActivated();
       };
     }
-    if ($("ipaMask")) $("ipaMask").onclick = () => closeIpa();
+    if ($("ipaMask")) {
+      $("ipaMask").onclick = (ev) => {
+        if (ev.target.closest && ev.target.closest(".ipa-add")) return;   // 在填音标别被关掉
+        closeIpa();
+      };
+    }
+    if ($("btnIpaAdd")) $("btnIpaAdd").onclick = (ev) => { ev.stopPropagation(); saveIpaFromInput(); };
+    if ($("ipaAddInput")) {
+      $("ipaAddInput").onkeydown = (ev) => {
+        if (ev.key === "Enter") { ev.preventDefault(); saveIpaFromInput(); }
+      };
+    }
     if ($("nbTabs")) {
       $("nbTabs").onclick = (e) => {
         const t = e.target.closest(".nb-tab");
@@ -4868,13 +5190,13 @@ voter, 选民"></textarea>
     };
 
     $("btnCloseSetting").onclick = () => {
-      $("settingModal").classList.remove("show");
+      $("settingModal").classList.remove("show", "over-drill");
     };
 
     $("btnSaveSetting").onclick = () => {
       saveSettingFromUI();
       alert("✅ 设置已保存并生效！");
-      $("settingModal").classList.remove("show");
+      $("settingModal").classList.remove("show", "over-drill");
     };
 
     $("btnReplay").onclick = () => {
@@ -4998,12 +5320,32 @@ voter, 选民"></textarea>
   // ---------- 全屏词表：全部 / 未学习 / 复习中 / 已标熟 + 底部五个功能 ----------
   let wbFilter = "all";
   let wbShown = [];
+  let wbOpenEn = "";        // 当前展开的那一行（一次只开一行）
 
   function wbStatusOf(w) {
     const en = String(w.en || "").toLowerCase();
     if (mastered.some(x => String(x.en).toLowerCase() === en)) return "done";
     if (notebookHas(en)) return "rev";
     return "new";
+  }
+
+  // 词表里的星：空心 = 还没收，点一下收进当前生词本；实心 = 已收，点一下从所在那本移出
+  function toggleWbStar(en) {
+    if (!en) return;
+    const k = String(en).toLowerCase();
+    const owner = nbFindGroup(en);
+    if (owner) {
+      owner.words = owner.words.filter(w => String(w.en).toLowerCase() !== k);
+      saveNotebook();
+      renderNotebookList();
+      renderBoard();
+      toast("已从「" + owner.name + "」移出 " + en);
+    } else {
+      const hit = wbFullWords.find(w => String(w.en).toLowerCase() === k);
+      addToNotebook(hit ? hit.en : en, hit ? hit.cn : "");
+    }
+    renderStarNum();
+    renderWbFull();
   }
 
   function renderWbFull() {
@@ -5014,13 +5356,28 @@ voter, 选民"></textarea>
     if ($("wbFullTitle")) $("wbFullTitle").innerText = wbCurName() + " · " + wbFullWords.length + " 个词";
     document.querySelectorAll(".wb-tab").forEach(t => t.classList.toggle("on", t.dataset.f === wbFilter));
     if ($("wbFullList")) {
+      const listBox = $("wbFullList");
+      const keep = listBox.scrollTop;
       if (!wbShown.length) {
-        $("wbFullList").innerHTML = '<div class="nb-empty">这一栏还是空的：点上面的标签换一栏看看。</div>';
+        listBox.innerHTML = '<div class="nb-empty">这一栏还是空的：点上面的标签换一栏看看。</div>';
       } else {
-        $("wbFullList").innerHTML = wbShown.map(w =>
-          '<div class="wbfull-row"><span class="wf-en">' + escHtml(w.en) +
-          '</span><span class="wf-cn">' + escHtml(w.cn) + '</span></div>').join("");
+        listBox.innerHTML = wbShown.map(w => {
+          const key = String(w.en).toLowerCase();
+          const on = wbOpenEn && key === wbOpenEn;
+          const ipa = ipaOf(w.en, w);
+          const inNb = !!nbFindGroup(w.en);
+          return '<div class="wbfull-row' + (on ? " open" : "") + '" data-en="' + escHtml(w.en) + '" data-key="' + escHtml(key) + '">' +
+            '<div class="wf-main"><span class="wf-en">' + escHtml(w.en) + '</span></div>' +
+            '<div class="wf-more">' +
+              '<span class="wf-ipa' + (ipa ? "" : " empty") + '">' + (ipa ? "/ " + escHtml(ipa) + " /" : "还没有音标") + '</span>' +
+              '<span class="wf-cn">' + escHtml(w.cn) + '</span>' +
+            '</div>' +
+            '<button class="wf-speak" data-act="speak" aria-label="读一遍">🔊</button>' +
+            '<button class="wf-star' + (inNb ? " on" : "") + '" data-act="star" aria-label="生词本">' + (inNb ? "★" : "☆") + '</button>' +
+          '</div>';
+        }).join("");
       }
+      listBox.scrollTop = keep;
     }
   }
 
@@ -5033,6 +5390,7 @@ voter, 选民"></textarea>
     wbFullWords = base.concat(learned);
     if (!wbFullWords.length) { toast("词库里还没有词条：一行一条「英文, 中文」"); return; }
     wbFilter = "all";
+    wbOpenEn = "";
     renderWbFull();
     $("wbFull").classList.add("show");
   }
@@ -5608,10 +5966,12 @@ voter, 选民"></textarea>
     spellDone = true;
     if (built.toLowerCase() === String(w.en).toLowerCase()) {
       $("spellCn").innerText = "✔ 拼对了：" + w.en;
+      try { if (setting.matchSuccess !== false) { initAudio(); playSuccessSound(setting.successStyle); } } catch (e) {}
       setTimeout(() => { nextSpell(false); }, 900);
     } else {
       if (!spellMiss.some(x => x.en === w.en)) spellMiss.push(w);
       $("spellCn").innerText = "✘ 正确：" + w.en;
+      try { if (setting.matchFail !== false) { initAudio(); playFailSound(setting.failStyle); } } catch (e) {}
       setTimeout(() => { nextSpell(true); }, 1600);
     }
   }
@@ -5619,6 +5979,20 @@ voter, 选民"></textarea>
   function nextSpell() {
     spellIdx++;
     if (spellIdx >= spellList.length) finishSpell(); else renderSpell();
+  }
+
+  // 随手拼：上一个 / 下一个（到头就停住，不硬跳回开头）
+  function spellPrev() {
+    if (!spellList.length) return;
+    if (spellIdx <= 0) { toast("已经是第一个了"); return; }
+    spellIdx--;
+    renderSpell();
+  }
+  function spellNext() {
+    if (!spellList.length) return;
+    if (spellIdx >= spellList.length - 1) { toast("已经是最后一个了"); return; }
+    spellIdx++;
+    renderSpell();
   }
 
   function spellSkip() {
@@ -5698,9 +6072,36 @@ voter, 选民"></textarea>
       $("wbFullList").onclick = (ev) => {
         const row = ev.target.closest ? ev.target.closest(".wbfull-row") : null;
         if (!row) return;
-        const en = row.querySelector(".wf-en");
-        if (en) { initAudio(); speak(en.innerText, true); }
+        const en = row.dataset.en || "";
+        const actEl = ev.target.closest ? ev.target.closest("[data-act]") : null;
+        const act = actEl ? actEl.dataset.act : "";
+        if (act === "star") { toggleWbStar(en); return; }
+        if (act === "speak") { return; }   // 展开行里的喇叭只读，不折叠
+        const key = row.dataset.key || "";
+        if (wbOpenEn && wbOpenEn === key) {
+          wbOpenEn = "";
+        } else {
+          wbOpenEn = key;
+          initAudio();
+          speak(en, true);
+        }
+        renderWbFull();
+        // 展开的那一行留在视野里（别被底部功能条压住）
+        if (wbOpenEn && $("wbFullList")) {
+          const r2 = $("wbFullList").querySelector('.wbfull-row[data-key="' + wbOpenEn.replace(/"/g, '\\"') + '"]');
+          if (r2 && r2.scrollIntoView) r2.scrollIntoView({ block: "nearest" });
+        }
       };
+      // 喇叭按钮：读一遍（放在捕获前后都行，单独拦一下）
+      $("wbFullList").addEventListener("click", (ev) => {
+        const actEl = ev.target.closest ? ev.target.closest('[data-act="speak"]') : null;
+        if (!actEl) return;
+        const row = actEl.closest(".wbfull-row");
+        if (!row) return;
+        ev.stopPropagation();
+        initAudio();
+        speak(row.dataset.en || "", true);
+      }, true);
     }
 
     // 底部五格
@@ -5776,6 +6177,15 @@ voter, 选民"></textarea>
     if ($("btnSpellBack")) $("btnSpellBack").onclick = spellBack;
     if ($("btnSpellSkip")) $("btnSpellSkip").onclick = spellSkip;
     if ($("btnSpellCheck")) $("btnSpellCheck").onclick = spellCheck;
+    if ($("btnSpellPrev")) $("btnSpellPrev").onclick = spellPrev;
+    if ($("btnSpellNext")) $("btnSpellNext").onclick = spellNext;
+    if ($("btnSpellCfg")) {
+      $("btnSpellCfg").onclick = () => {
+        loadSettingUI();
+        const m = $("settingModal");
+        if (m) { m.classList.add("over-drill"); m.classList.add("show"); }
+      };
+    }
     if ($("spellTiles")) {
       $("spellTiles").onclick = (ev) => {
         const t = ev.target.closest ? ev.target.closest(".spell-tile") : null;
