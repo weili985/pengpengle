@@ -1206,10 +1206,11 @@
     color: #e6dcc6;
     font-size: 15px;
     line-height: 1.5;
-    padding-right: 92px;
+    padding-right: 136px;
   }
   .wbfull-row .wf-star,
-  .wbfull-row .wf-speak {
+  .wbfull-row .wf-speak,
+  .wbfull-row .wf-mast {
     position: absolute;
     bottom: 12px;
     width: 34px;
@@ -1225,12 +1226,19 @@
   }
   .wbfull-row .wf-star { right: 12px; color: rgba(233, 180, 76, 0.55); }
   .wbfull-row .wf-speak { right: 54px; color: #e9b44c; font-size: 15px; }
+  .wbfull-row .wf-mast { right: 96px; color: #cfe3d9; font-size: 13px; font-weight: 700; }
   .wbfull-row.open .wf-star,
-  .wbfull-row.open .wf-speak { display: flex; }
+  .wbfull-row.open .wf-speak,
+  .wbfull-row.open .wf-mast { display: flex; }
   .wbfull-row .wf-star.on {
     background: #e9b44c;
     border-color: #e9b44c;
     color: #12271c;
+  }
+  .wbfull-row .wf-mast.on {
+    background: #6f8f7c;
+    border-color: #6f8f7c;
+    color: #10241a;
   }
   /* 释义弹窗：音标缺失时就地补录 */
   .ipa-add {
@@ -2111,7 +2119,7 @@ voter, 选民"></textarea>
         </select>
       </div>
       <div class="select-row">
-        <span>配对成功</span>
+        <span>成功（配对/拼写）</span>
         <select class="setting-select" id="selSuccessStyle">
           <option value="stardust">星尘碎铃 good</option>
           <option value="wow">wow 上升</option>
@@ -2125,7 +2133,7 @@ voter, 选民"></textarea>
         </select>
       </div>
       <div class="select-row">
-        <span>配对失败</span>
+        <span>失败（配对/拼写）</span>
         <select class="setting-select" id="selFailStyle">
           <option value="down">低沉下滑</option>
           <option value="thud">闷咚</option>
@@ -2152,6 +2160,9 @@ voter, 选民"></textarea>
         <button class="btn-small" id="btnTestClick">试听点击</button>
         <button class="btn-small" id="btnTestSuccess">试听成功</button>
         <button class="btn-small" id="btnTestFail">试听失败</button>
+      </div>
+      <div style="margin-top:6px;color:#9fb8ab;font-size:12px;line-height:1.5;">
+        「成功」同时用于配对成功、随手拼拼对、听写答对；「失败」用于配对失败、拼错、写错。挑哪种，三处一起变。
       </div>
       <div style="margin-top:14px;">
         <button class="btn" id="btnVoiceEntry" style="width:100%;font-size:16px;">我的声音（录自己的读音）›</button>
@@ -3624,7 +3635,7 @@ voter, 选民"></textarea>
   // 声音自检：把"没声音"到底卡在哪一步摆到脸上
   function ttsStatusText() {
     const bits = [];
-    bits.push("版本 v1.10.18");
+    bits.push("版本 v1.10.19");
     bits.push("读词开关：" + (setting.autoRead ? "开" : "关"));
     if (window.AndroidTTS) {
       let ready = "调用出错";
@@ -5329,9 +5340,38 @@ voter, 选民"></textarea>
     return "new";
   }
 
-  // 词表里的星：空心 = 还没收，点一下收进当前生词本；实心 = 已收，点一下从所在那本移出
-  function toggleWbStar(en) {
+  // 词表里的「熟」：标熟 → 从词库和生词本摘掉，以后任何练习都不再出现；再点「已熟」→ 取消，回到词库
+  function toggleWbMastered(en) {
     if (!en) return;
+    const k = String(en).toLowerCase();
+    const hit = wbFullWords.find(w => String(w.en).toLowerCase() === k);
+    if (masteredHas(en)) {
+      masteredRemove(en);
+      if (hit && hit.cn && !wordbook.some(w => String(w.en).toLowerCase() === k)) {
+        wordbook.push({ en: hit.en, cn: hit.cn });
+        saveWordbook();
+        syncWbListEntry();
+      }
+      toast("已取消「熟」：" + en + " 回到词库");
+    } else {
+      if (!hit || !hit.cn) { toast("这个词没有中文释义，标不了熟"); return; }
+      masteredAdd(hit.en, hit.cn);
+      wordbook = wordbook.filter(w => String(w.en).toLowerCase() !== k);
+      saveWordbook();
+      syncWbListEntry();
+      // 生词本里也摘掉，否则「练某本」还会把它翻出来
+      nbGroups.forEach(g => { g.words = g.words.filter(w => String(w.en).toLowerCase() !== k); });
+      saveNotebook();
+      renderNotebookList();
+      toast("已标熟：" + en + "，以后练习不再出现");
+    }
+    refreshPairChips();
+    renderBoard();
+    renderWbFull();
+  }
+
+  // 词表里的星：空心 = 还没收，点一下收进当前生词本；实心 = 已收，点一下从所在那本移出
+  function toggleWbStar(en) {    if (!en) return;
     const k = String(en).toLowerCase();
     const owner = nbFindGroup(en);
     if (owner) {
@@ -5366,12 +5406,14 @@ voter, 选民"></textarea>
           const on = wbOpenEn && key === wbOpenEn;
           const ipa = ipaOf(w.en, w);
           const inNb = !!nbFindGroup(w.en);
+          const isDone = mastered.some(x => String(x.en).toLowerCase() === key);
           return '<div class="wbfull-row' + (on ? " open" : "") + '" data-en="' + escHtml(w.en) + '" data-key="' + escHtml(key) + '">' +
             '<div class="wf-main"><span class="wf-en">' + escHtml(w.en) + '</span></div>' +
             '<div class="wf-more">' +
               '<span class="wf-ipa' + (ipa ? "" : " empty") + '">' + (ipa ? "/ " + escHtml(ipa) + " /" : "还没有音标") + '</span>' +
               '<span class="wf-cn">' + escHtml(w.cn) + '</span>' +
             '</div>' +
+            '<button class="wf-mast' + (isDone ? " on" : "") + '" data-act="mast" aria-label="标熟">' + (isDone ? "已熟" : "熟") + '</button>' +
             '<button class="wf-speak" data-act="speak" aria-label="读一遍">🔊</button>' +
             '<button class="wf-star' + (inNb ? " on" : "") + '" data-act="star" aria-label="生词本">' + (inNb ? "★" : "☆") + '</button>' +
           '</div>';
@@ -5868,9 +5910,11 @@ voter, 选民"></textarea>
     dictDone = true;
     if (v === w.en.toLowerCase()) {
       $("dictTips").innerText = "✔ 写对了：" + w.en;
+      try { if (setting.matchSuccess !== false) { initAudio(); playSuccessSound(setting.successStyle); } } catch (e) {}
     } else {
       if (!dictMiss.some(x => x.en === w.en)) dictMiss.push(w);
       $("dictTips").innerText = "✘ 正确拼写：" + w.en;
+      try { if (setting.matchFail !== false) { initAudio(); playFailSound(setting.failStyle); } } catch (e) {}
     }
     setTimeout(() => {
       dictIdx++;
@@ -6076,6 +6120,7 @@ voter, 选民"></textarea>
         const actEl = ev.target.closest ? ev.target.closest("[data-act]") : null;
         const act = actEl ? actEl.dataset.act : "";
         if (act === "star") { toggleWbStar(en); return; }
+        if (act === "mast") { toggleWbMastered(en); return; }
         if (act === "speak") { return; }   // 展开行里的喇叭只读，不折叠
         const key = row.dataset.key || "";
         if (wbOpenEn && wbOpenEn === key) {
